@@ -1,0 +1,21 @@
+[package]
+name = "querencia-screenshot"
+version = "0.1.0"
+edition = "2024"
+description = "Klassisches Screenshot-Werkzeug für Querencia Desktop (grim, slurp, wl-copy)"
+license = "MIT"
+publish = false
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.11", features = ["v4_12"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[lints.rust]
+unsafe_code = "forbid"
+unused_must_use = "deny"
+
+[lints.clippy]
+unwrap_used = "warn"
