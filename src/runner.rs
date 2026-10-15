@@ -7,10 +7,11 @@
 
 use std::{
     ffi::OsStr,
-    fmt,
+    fmt, io,
     io::{Read, Write},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{ChildStdin, Command, Stdio},
+    sync::mpsc::{self, Sender},
     thread,
 };
 
@@ -20,6 +21,8 @@ pub const MAX_OUTPUT_BYTES: usize = 64 * 1024 * 1024;
 pub const MAX_STDERR_BYTES: usize = 64 * 1024;
 /// Wie viel stderr in Meldungen übernommen wird.
 const STDERR_EXCERPT_CHARS: usize = 2000;
+/// Lesepuffer je Strom und Schleifendurchlauf.
+const READ_CHUNK_BYTES: usize = 64 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Output {
@@ -42,6 +45,8 @@ pub enum RunError {
     Spawn(String, String),
     /// Ausgabe größer als die Grenze; der Prozess wurde beendet.
     Oversized(String),
+    /// Lesen der Ausgabe fehlgeschlagen; der Prozess wurde beendet.
+    Read(String, String),
 }
 
 impl fmt::Display for RunError {
@@ -57,6 +62,10 @@ impl fmt::Display for RunError {
                     "Ausgabe von „{program}“ ist zu groß; Programm wurde beendet"
                 )
             }
+            Self::Read(program, error) => write!(
+                f,
+                "Ausgabe von „{program}“ konnte nicht gelesen werden ({error}); Programm wurde beendet"
+            ),
         }
     }
 }
@@ -86,6 +95,13 @@ impl SystemRunner {
     }
 
     /// Wie `run`, mit eigenen Grenzen für stdout und stderr.
+    ///
+    /// Beide Ströme werden parallel in eigenen Threads gelesen und melden
+    /// Überlauf, Lesefehler und Ende über einen Channel an diesen Thread.
+    /// Beim ersten Überlauf oder Lesefehler wird das Kind sofort beendet und
+    /// eingesammelt, ohne auf den anderen Strom zu warten: ein Kind, das nach
+    /// dem Überlauf weiterlebt und seine Rohre offen hält, kann diese
+    /// Funktion nicht aufhalten.
     pub fn run_bounded(
         &self,
         program: &str,
@@ -110,42 +126,71 @@ impl SystemRunner {
             .stderr(Stdio::piped());
         let mut child = command.spawn().map_err(spawn_error)?;
 
-        // Jeder Strom bekommt einen eigenen Thread, damit ein voller Puffer
-        // auf der einen Seite nie das Lesen der anderen blockiert.
-        let writer = child.stdin.take().map(|mut pipe| {
+        let writer = child.stdin.take().map(|pipe| {
             let bytes = stdin.map(<[u8]>::to_vec).unwrap_or_default();
-            thread::spawn(move || {
-                // Ein Leser, der vorzeitig schließt, ist kein Fehler des Aufrufers.
-                let _ = pipe.write_all(&bytes);
-            })
+            thread::spawn(move || write_all_then_close(pipe, &bytes))
         });
-        let stdout = child
-            .stdout
-            .take()
-            .map(|pipe| read_bounded_in_thread(pipe, max_stdout));
-        let stderr = child
-            .stderr
-            .take()
-            .map(|pipe| read_bounded_in_thread(pipe, max_stderr));
-
-        let stdout = join_reader(stdout);
-        let stderr = join_reader(stderr);
-        let overflowed = stdout.overflowed || stderr.overflowed;
-        if overflowed {
-            // Beenden und einsammeln: kein Zombie, keine weitere Ausgabe.
-            let _ = child.kill();
+        let (events, inbox) = mpsc::channel();
+        let mut pending = 0;
+        if let Some(pipe) = child.stdout.take() {
+            spawn_reader(Stream::Stdout, pipe, max_stdout, events.clone());
+            pending += 1;
         }
+        if let Some(pipe) = child.stderr.take() {
+            spawn_reader(Stream::Stderr, pipe, max_stderr, events.clone());
+            pending += 1;
+        }
+        drop(events);
+
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        let mut failure = None;
+        while pending > 0 {
+            match inbox.recv() {
+                Ok(Event::Finished(Stream::Stdout, Ok(bytes))) => stdout = bytes,
+                Ok(Event::Finished(Stream::Stderr, Ok(bytes))) => stderr = bytes,
+                Ok(Event::Overflow) => {
+                    failure = Some(RunError::Oversized(program.to_owned()));
+                }
+                Ok(Event::Finished(stream, Err(error))) => {
+                    failure = Some(RunError::Read(
+                        program.to_owned(),
+                        format!("{stream}: {error}"),
+                    ));
+                }
+                // Alle Sender weg, obwohl noch Ströme ausstehen: ein Lesethread
+                // ist abgebrochen. Das ist ein Fehler, keine leere Ausgabe.
+                Err(_) => {
+                    failure = Some(RunError::Read(
+                        program.to_owned(),
+                        "Lesethread wurde unerwartet beendet".to_owned(),
+                    ));
+                }
+            }
+            if failure.is_some() {
+                break;
+            }
+            pending -= 1;
+        }
+
+        if let Some(error) = failure {
+            // Sofort beenden und einsammeln. Auf die verbliebenen Leser und
+            // den Schreiber wird nicht gewartet: sie enden, sobald ihre Rohre
+            // schließen, und halten weder Kind noch Aufrufer fest.
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(error);
+        }
+
+        // Beide Ströme sind am Ende: das Kind hat seine Ausgabe geschlossen.
         let status = child.wait().map_err(spawn_error)?;
         if let Some(writer) = writer {
             let _ = writer.join();
         }
-        if overflowed {
-            return Err(RunError::Oversized(program.to_owned()));
-        }
         Ok(Output {
             status: status.code().unwrap_or(-1),
-            stdout: stdout.bytes,
-            stderr: String::from_utf8_lossy(&stderr.bytes)
+            stdout,
+            stderr: String::from_utf8_lossy(&stderr)
                 .chars()
                 .take(STDERR_EXCERPT_CHARS)
                 .collect(),
@@ -153,37 +198,70 @@ impl SystemRunner {
     }
 }
 
-struct BoundedRead {
-    bytes: Vec<u8>,
-    overflowed: bool,
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Stream {
+    Stdout,
+    Stderr,
 }
 
-/// Liest höchstens `limit` Bytes; ein weiteres Byte beweist den Überlauf,
-/// danach wird nicht mehr gelesen (der Prozess blockiert dann auf dem
-/// vollen Rohr, bis `kill` es schließt).
-fn read_bounded(mut reader: impl Read, limit: usize) -> BoundedRead {
+impl fmt::Display for Stream {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Stdout => "stdout",
+            Self::Stderr => "stderr",
+        })
+    }
+}
+
+/// Meldung eines Lesethreads an den koordinierenden Thread.
+#[derive(Debug)]
+enum Event {
+    /// Mehr als die erlaubte Menge; der Leser hat aufgehört zu lesen.
+    /// Welcher Strom: unerheblich, beide führen zum selben Abbruch.
+    Overflow,
+    /// Strom zu Ende (Ok) oder Lesefehler (Err).
+    Finished(Stream, io::Result<Vec<u8>>),
+}
+
+/// Liest `reader` bis zum Ende, höchstens `limit` Bytes. Ein Byte über der
+/// Grenze beweist den Überlauf; dann wird `Overflow` gemeldet und nicht
+/// weitergelesen. Lesefehler werden gemeldet, nie als leere Ausgabe getarnt.
+fn read_stream(stream: Stream, mut reader: impl Read, limit: usize, events: &Sender<Event>) {
     let mut bytes = Vec::new();
-    let mut probe = reader.by_ref().take(limit as u64 + 1);
-    let _ = probe.read_to_end(&mut bytes);
-    let overflowed = bytes.len() > limit;
-    bytes.truncate(limit);
-    BoundedRead { bytes, overflowed }
+    let mut chunk = [0u8; READ_CHUNK_BYTES];
+    let event = loop {
+        match reader.read(&mut chunk) {
+            Ok(0) => break Event::Finished(stream, Ok(bytes)),
+            Ok(n) => {
+                if bytes.len() + n > limit {
+                    break Event::Overflow;
+                }
+                bytes.extend_from_slice(&chunk[..n]);
+            }
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
+            Err(error) => break Event::Finished(stream, Err(error)),
+        }
+    };
+    // Der Empfänger ist nur weg, wenn der Koordinator schon abgebrochen hat.
+    let _ = events.send(event);
 }
 
-fn read_bounded_in_thread(
+fn spawn_reader(
+    stream: Stream,
     reader: impl Read + Send + 'static,
     limit: usize,
-) -> thread::JoinHandle<BoundedRead> {
-    thread::spawn(move || read_bounded(reader, limit))
+    events: Sender<Event>,
+) {
+    thread::spawn(move || read_stream(stream, reader, limit, &events));
 }
 
-fn join_reader(handle: Option<thread::JoinHandle<BoundedRead>>) -> BoundedRead {
-    handle
-        .and_then(|handle| handle.join().ok())
-        .unwrap_or(BoundedRead {
-            bytes: Vec::new(),
-            overflowed: false,
-        })
+/// Schreibt alles und schließt das Rohr danach ausdrücklich, damit das Kind
+/// ein Ende sieht. Ein Kind, das vorher schließt (EPIPE), ist kein Fehler des
+/// Aufrufers; das Ergebnis dient nur der Diagnose.
+fn write_all_then_close(mut pipe: ChildStdin, bytes: &[u8]) -> io::Result<()> {
+    let result = pipe.write_all(bytes).and_then(|()| pipe.flush());
+    drop(pipe);
+    result
 }
 
 fn is_executable(path: &Path) -> bool {
@@ -322,7 +400,6 @@ mod tests {
     #[test]
     fn oversized_output_stops_the_process_promptly_and_reaps_it() {
         let runner = SystemRunner;
-        let before = zombie_children();
         let started = Instant::now();
         // `yes` liefert unendlich viel; ohne Begrenzung käme dieser Test nie zurück.
         let result = runner.run_bounded("yes", &["querencia"], None, 256 * 1024, MAX_STDERR_BYTES);
@@ -340,11 +417,112 @@ mod tests {
             64 * 1024,
         );
         assert_eq!(result, Err(RunError::Oversized("sh".into())));
-        assert_eq!(
-            zombie_children(),
-            before,
-            "beendete Kinder sind eingesammelt"
+        assert_children_get_reaped();
+    }
+
+    #[test]
+    fn oversized_output_from_a_lingering_process_returns_promptly() {
+        // Das Kind überschreitet die Grenze, lebt danach weiter und hält
+        // stdout und stderr offen, ohne noch etwas zu schreiben. Vorher
+        // wartete run_bounded auf das Ende von stderr – hier 30 s.
+        let runner = SystemRunner;
+        for (script, max_stdout, max_stderr) in [
+            // Kind selbst lebt weiter (exec: kein Enkel).
+            (
+                "head -c 300000 /dev/zero; exec sleep 30",
+                256 * 1024,
+                MAX_STDERR_BYTES,
+            ),
+            // Überlauf auf stderr.
+            (
+                "head -c 300000 /dev/zero >&2; exec sleep 30",
+                MAX_OUTPUT_BYTES,
+                64 * 1024,
+            ),
+            // Enkel hält die Rohre auch nach dem Beenden des Kindes offen.
+            (
+                "head -c 300000 /dev/zero; sleep 3",
+                256 * 1024,
+                MAX_STDERR_BYTES,
+            ),
+        ] {
+            let started = Instant::now();
+            let result = runner.run_bounded("sh", &["-c", script], None, max_stdout, max_stderr);
+            let elapsed = started.elapsed();
+            assert_eq!(result, Err(RunError::Oversized("sh".into())), "{script}");
+            assert!(
+                elapsed < Duration::from_secs(5),
+                "{script}: {elapsed:?} – muss beim Überlauf zurückkehren, nicht beim Prozessende"
+            );
+        }
+        assert_children_get_reaped();
+        assert!(
+            !has_live_child_named("sleep"),
+            "das Kind wurde beendet, nicht nur verlassen"
         );
+    }
+
+    #[test]
+    fn overflow_is_detected_at_the_boundary_and_errors_are_reported() {
+        let (events, inbox) = mpsc::channel();
+        read_stream(Stream::Stdout, &b"12345"[..], 5, &events);
+        assert!(matches!(
+            inbox.recv().expect("event"),
+            Event::Finished(Stream::Stdout, Ok(bytes)) if bytes == b"12345"
+        ));
+        read_stream(Stream::Stdout, &b"123456"[..], 5, &events);
+        assert!(matches!(inbox.recv().expect("event"), Event::Overflow));
+
+        struct Broken;
+        impl Read for Broken {
+            fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+                Err(io::Error::other("Rohr defekt"))
+            }
+        }
+        read_stream(Stream::Stderr, Broken, 5, &events);
+        assert!(matches!(
+            inbox.recv().expect("event"),
+            Event::Finished(Stream::Stderr, Err(error)) if error.to_string() == "Rohr defekt"
+        ));
+        let error = RunError::Read("grim".into(), "stderr: Rohr defekt".into());
+        assert_eq!(
+            error.to_string(),
+            "Ausgabe von „grim“ konnte nicht gelesen werden (stderr: Rohr defekt); Programm wurde beendet"
+        );
+    }
+
+    /// Lebt noch ein (nicht eingesammeltes, nicht beendetes) Kind dieses
+    /// Prozesses mit dem Namen `name`?
+    fn has_live_child_named(name: &str) -> bool {
+        let me = std::process::id().to_string();
+        std::fs::read_dir("/proc")
+            .map(|entries| {
+                entries
+                    .flatten()
+                    .filter_map(|entry| std::fs::read_to_string(entry.path().join("status")).ok())
+                    .any(|status| {
+                        status.lines().any(|line| line == format!("Name:\t{name}"))
+                            && !status.contains("State:\tZ")
+                            && status
+                                .lines()
+                                .any(|line| line.strip_prefix("PPid:\t") == Some(me.as_str()))
+                    })
+            })
+            .unwrap_or(false)
+    }
+
+    /// Ein nie eingesammeltes Kind bleibt für immer Zombie; Kinder anderer,
+    /// gleichzeitig laufender Tests sind nur für Mikrosekunden Zombies
+    /// (zwischen Ende und `wait`). Darum wird kurz gewartet statt ein
+    /// Vorher/Nachher-Zählwert verglichen.
+    fn assert_children_get_reaped() {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let mut zombies = zombie_children();
+        while zombies > 0 && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(10));
+            zombies = zombie_children();
+        }
+        assert_eq!(zombies, 0, "beendete Kinder sind nicht eingesammelt");
     }
 
     /// Zombie-Kinder dieses Testprozesses laut /proc.
