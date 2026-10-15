@@ -56,16 +56,28 @@ impl From<RunError> for CaptureError {
 }
 
 /// Lässt den Benutzer mit slurp einen Bereich aufziehen. `Ok(None)` heißt
-/// Abbruch (Escape oder Rechtsklick), kein Fehler.
+/// Abbruch durch den Benutzer (Escape oder Rechtsklick): slurp beendet sich
+/// dann mit Status 1 und „selection cancelled“ auf stderr. Jeder andere
+/// Fehlstatus ist ein echter Fehler und wird mit stderr gemeldet.
 pub fn select_region(runner: &dyn CommandRunner) -> Result<Option<Region>, CaptureError> {
     let output = runner.run(SLURP, &["-f", "%x,%y %wx%h"], None)?;
-    let text = String::from_utf8_lossy(&output.stdout);
-    match Region::parse(&text) {
-        Ok(region) => Ok(Some(region)),
-        Err(GeometryError::Empty) if !output.success() => Ok(None),
-        Err(GeometryError::Empty) => Ok(None),
-        Err(error) => Err(CaptureError::Geometry(error)),
+    if !output.success() {
+        if output.status == 1 && slurp_cancelled(&output.stderr) {
+            return Ok(None);
+        }
+        return Err(CaptureError::Failed {
+            status: output.status,
+            stderr: output.stderr,
+        });
     }
+    let text = String::from_utf8_lossy(&output.stdout);
+    Region::parse(&text)
+        .map(Some)
+        .map_err(CaptureError::Geometry)
+}
+
+fn slurp_cancelled(stderr: &str) -> bool {
+    stderr.to_ascii_lowercase().contains("cancel")
 }
 
 /// Nimmt `scope` mit grim als PNG auf (Ausgabe auf stdout, keine Datei).
@@ -113,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    fn region_selection_parses_slurp_and_treats_cancel_as_none() {
+    fn region_selection_parses_slurp_output_with_a_fixed_format() {
         let runner = FakeRunner::default().respond(SLURP, exit(0, b"10,20 300x150\n", ""));
         assert_eq!(
             select_region(&runner).expect("selection"),
@@ -129,16 +141,57 @@ mod tests {
             vec!["-f", "%x,%y %wx%h"],
             "slurp bekommt ein festes Ausgabeformat"
         );
+    }
 
-        let cancelled = FakeRunner::default().respond(SLURP, exit(1, b"", "selection cancelled\n"));
-        assert_eq!(select_region(&cancelled).expect("cancel"), None);
+    #[test]
+    fn user_cancellation_is_not_an_error() {
+        for stderr in ["selection cancelled\n", "Selection cancelled", "cancelled"] {
+            let cancelled = FakeRunner::default().respond(SLURP, exit(1, b"", stderr));
+            assert_eq!(
+                select_region(&cancelled).expect("cancel"),
+                None,
+                "{stderr:?}"
+            );
+        }
+    }
 
+    #[test]
+    fn slurp_failures_are_reported_not_swallowed() {
+        let unsupported = FakeRunner::default().respond(
+            SLURP,
+            exit(1, b"", "compositor doesn't support zwlr_layer_shell_v1\n"),
+        );
+        assert_eq!(
+            select_region(&unsupported),
+            Err(CaptureError::Failed {
+                status: 1,
+                stderr: "compositor doesn't support zwlr_layer_shell_v1\n".into()
+            })
+        );
+        let crashed = FakeRunner::default().respond(SLURP, exit(2, b"", "cancelled by signal"));
+        assert!(
+            matches!(
+                select_region(&crashed),
+                Err(CaptureError::Failed { status: 2, .. })
+            ),
+            "nur Status 1 gilt als Benutzerabbruch"
+        );
+        let silent = FakeRunner::default().respond(SLURP, exit(1, b"", ""));
+        assert!(matches!(
+            select_region(&silent),
+            Err(CaptureError::Failed { status: 1, .. })
+        ));
+        let empty_success = FakeRunner::default().respond(SLURP, exit(0, b"", ""));
+        assert_eq!(
+            select_region(&empty_success),
+            Err(CaptureError::Geometry(GeometryError::Empty)),
+            "Erfolg ohne Auswahl ist kein stiller Abbruch"
+        );
         let garbage = FakeRunner::default().respond(SLURP, exit(0, b"nonsense", ""));
         assert!(matches!(
             select_region(&garbage),
             Err(CaptureError::Geometry(GeometryError::Malformed(_)))
         ));
-
         let missing = FakeRunner::default().respond(SLURP, Err(RunError::Missing(SLURP.into())));
         assert_eq!(
             select_region(&missing),

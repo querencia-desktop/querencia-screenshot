@@ -28,9 +28,18 @@ LOG="$ROOT/logs/querencia-screenshot-$STAMP.log"
 
 [[ -x "$BIN" ]] || die "$BIN fehlt – erst bauen: (cd $REPO && ~/.cargo/bin/cargo +1.98.1 build)"
 [[ -n "${WAYLAND_DISPLAY:-}" ]] || die "keine Wayland-Sitzung (WAYLAND_DISPLAY leer)"
-if pids="$(pgrep -u "$(id -u)" -x querencia-screenshot)"; then
-  die "querencia-screenshot läuft bereits (PID ${pids//$'\n'/, })"
-fi
+# Laufende Instanz: über den tatsächlichen Binary-Pfad (/proc/*/exe), nicht
+# über den auf 15 Zeichen gekürzten Prozessnamen; nur eigene Prozesse, nichts
+# wird beendet.
+BIN_REAL="$(realpath -e "$BIN")"
+running=""
+for proc in /proc/[0-9]*; do
+  [[ -O "$proc" ]] || continue
+  exe="$(readlink "$proc/exe" 2>/dev/null || true)"
+  exe="${exe% (deleted)}"
+  [[ "$exe" == "$BIN_REAL" ]] && running="$running ${proc#/proc/}"
+done
+[[ -z "$running" ]] || die "querencia-screenshot läuft bereits (PID${running}); bitte zuerst beenden"
 
 # Isolation: Screenshots landen unter $ROOT/Bilder/Screenshots (XDG-Bilderordner
 # des Profils), Einstellungen/Caches im Profil; das Symbolthema wie bei QF-0d.

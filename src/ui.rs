@@ -341,16 +341,36 @@ fn copy_capture(state: &Rc<State>) {
     let Some(png) = state.capture.borrow().clone() else {
         return;
     };
-    let runner = runner::SystemRunner;
-    if runner.available(clipboard::WL_COPY) {
-        match clipboard::copy_png(&runner, &png) {
-            Ok(()) => set_status(state, "In die Zwischenablage kopiert (image/png)."),
-            Err(error) => set_status(state, &error.to_string()),
-        }
+    if *state.busy.borrow() {
         return;
     }
-    // Ohne wl-copy bietet GTK die Daten selbst an – nur solange dieses
-    // Fenster offen ist.
+    let runner = runner::SystemRunner;
+    if !runner.available(clipboard::WL_COPY) {
+        copy_via_gtk(state, &png);
+        return;
+    }
+    // wl-copy läuft außerhalb des GTK-Hauptthreads; die Oberfläche bleibt
+    // bedienbar und zeigt das Ergebnis danach im Hauptkontext an.
+    *state.busy.borrow_mut() = true;
+    state.result.set_sensitive(false);
+    set_status(state, "Kopiere in die Zwischenablage …");
+    let state = state.clone();
+    glib::spawn_future_local(async move {
+        let outcome =
+            gio::spawn_blocking(move || clipboard::copy_png(&runner::SystemRunner, &png)).await;
+        *state.busy.borrow_mut() = false;
+        state.result.set_sensitive(true);
+        match outcome {
+            Ok(Ok(())) => set_status(&state, "In die Zwischenablage kopiert (image/png)."),
+            Ok(Err(error)) => set_status(&state, &error.to_string()),
+            Err(_) => set_status(&state, "Kopieren wurde unerwartet beendet."),
+        }
+    });
+}
+
+/// Ohne wl-copy bietet GTK die Daten selbst an – nur solange dieses Fenster
+/// offen ist.
+fn copy_via_gtk(state: &Rc<State>, png: &screenshot::Png) {
     let bytes = glib::Bytes::from(png.bytes());
     match gdk::Texture::from_bytes(&bytes) {
         Ok(texture) => {

@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: MIT
 
 //! Ausführung externer Programme mit expliziten Argumenten (keine Shell),
-//! hinter einer Schnittstelle, die Tests durch Attrappen ersetzen.
+//! hinter einer Schnittstelle, die Tests durch Attrappen ersetzen. Die
+//! Ausgaben werden beim Lesen begrenzt; ein Prozess, der mehr liefert, wird
+//! beendet und eingesammelt, nie unbegrenzt gepuffert.
 
 use std::{
     ffi::OsStr,
     fmt,
-    io::Write,
+    io::{Read, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
+    thread,
 };
 
-/// Obergrenze für gelesene Programmausgaben (PNG eines großen Bildschirms
-/// bleibt weit darunter).
+/// Obergrenze für stdout (das PNG eines großen Bildschirms bleibt weit darunter).
 pub const MAX_OUTPUT_BYTES: usize = 64 * 1024 * 1024;
+/// Obergrenze für stderr; Fehlermeldungen sind kurz.
+pub const MAX_STDERR_BYTES: usize = 64 * 1024;
+/// Wie viel stderr in Meldungen übernommen wird.
+const STDERR_EXCERPT_CHARS: usize = 2000;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Output {
@@ -34,7 +40,7 @@ pub enum RunError {
     Missing(String),
     /// Start oder Wartezeit fehlgeschlagen.
     Spawn(String, String),
-    /// Ausgabe größer als `MAX_OUTPUT_BYTES`.
+    /// Ausgabe größer als die Grenze; der Prozess wurde beendet.
     Oversized(String),
 }
 
@@ -45,7 +51,12 @@ impl fmt::Display for RunError {
             Self::Spawn(program, error) => {
                 write!(f, "„{program}“ konnte nicht gestartet werden: {error}")
             }
-            Self::Oversized(program) => write!(f, "Ausgabe von „{program}“ ist zu groß"),
+            Self::Oversized(program) => {
+                write!(
+                    f,
+                    "Ausgabe von „{program}“ ist zu groß; Programm wurde beendet"
+                )
+            }
         }
     }
 }
@@ -73,17 +84,16 @@ impl SystemRunner {
                 .find(|candidate| is_executable(candidate))
         })
     }
-}
 
-fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::metadata(path)
-        .map(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
-        .unwrap_or(false)
-}
-
-impl CommandRunner for SystemRunner {
-    fn run(&self, program: &str, args: &[&str], stdin: Option<&[u8]>) -> Result<Output, RunError> {
+    /// Wie `run`, mit eigenen Grenzen für stdout und stderr.
+    pub fn run_bounded(
+        &self,
+        program: &str,
+        args: &[&str],
+        stdin: Option<&[u8]>,
+        max_stdout: usize,
+        max_stderr: usize,
+    ) -> Result<Output, RunError> {
         let executable =
             Self::locate(program).ok_or_else(|| RunError::Missing(program.to_owned()))?;
         let spawn_error =
@@ -99,24 +109,93 @@ impl CommandRunner for SystemRunner {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         let mut child = command.spawn().map_err(spawn_error)?;
-        if let Some(bytes) = stdin
-            && let Some(mut pipe) = child.stdin.take()
-        {
-            // Ein Leser, der vorzeitig schließt, ist kein Fehler des Aufrufers.
-            let _ = pipe.write_all(bytes);
+
+        // Jeder Strom bekommt einen eigenen Thread, damit ein voller Puffer
+        // auf der einen Seite nie das Lesen der anderen blockiert.
+        let writer = child.stdin.take().map(|mut pipe| {
+            let bytes = stdin.map(<[u8]>::to_vec).unwrap_or_default();
+            thread::spawn(move || {
+                // Ein Leser, der vorzeitig schließt, ist kein Fehler des Aufrufers.
+                let _ = pipe.write_all(&bytes);
+            })
+        });
+        let stdout = child
+            .stdout
+            .take()
+            .map(|pipe| read_bounded_in_thread(pipe, max_stdout));
+        let stderr = child
+            .stderr
+            .take()
+            .map(|pipe| read_bounded_in_thread(pipe, max_stderr));
+
+        let stdout = join_reader(stdout);
+        let stderr = join_reader(stderr);
+        let overflowed = stdout.overflowed || stderr.overflowed;
+        if overflowed {
+            // Beenden und einsammeln: kein Zombie, keine weitere Ausgabe.
+            let _ = child.kill();
         }
-        let output = child.wait_with_output().map_err(spawn_error)?;
-        if output.stdout.len() > MAX_OUTPUT_BYTES {
+        let status = child.wait().map_err(spawn_error)?;
+        if let Some(writer) = writer {
+            let _ = writer.join();
+        }
+        if overflowed {
             return Err(RunError::Oversized(program.to_owned()));
         }
         Ok(Output {
-            status: output.status.code().unwrap_or(-1),
-            stdout: output.stdout,
-            stderr: String::from_utf8_lossy(&output.stderr)
+            status: status.code().unwrap_or(-1),
+            stdout: stdout.bytes,
+            stderr: String::from_utf8_lossy(&stderr.bytes)
                 .chars()
-                .take(2000)
+                .take(STDERR_EXCERPT_CHARS)
                 .collect(),
         })
+    }
+}
+
+struct BoundedRead {
+    bytes: Vec<u8>,
+    overflowed: bool,
+}
+
+/// Liest höchstens `limit` Bytes; ein weiteres Byte beweist den Überlauf,
+/// danach wird nicht mehr gelesen (der Prozess blockiert dann auf dem
+/// vollen Rohr, bis `kill` es schließt).
+fn read_bounded(mut reader: impl Read, limit: usize) -> BoundedRead {
+    let mut bytes = Vec::new();
+    let mut probe = reader.by_ref().take(limit as u64 + 1);
+    let _ = probe.read_to_end(&mut bytes);
+    let overflowed = bytes.len() > limit;
+    bytes.truncate(limit);
+    BoundedRead { bytes, overflowed }
+}
+
+fn read_bounded_in_thread(
+    reader: impl Read + Send + 'static,
+    limit: usize,
+) -> thread::JoinHandle<BoundedRead> {
+    thread::spawn(move || read_bounded(reader, limit))
+}
+
+fn join_reader(handle: Option<thread::JoinHandle<BoundedRead>>) -> BoundedRead {
+    handle
+        .and_then(|handle| handle.join().ok())
+        .unwrap_or(BoundedRead {
+            bytes: Vec::new(),
+            overflowed: false,
+        })
+}
+
+fn is_executable(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(path)
+        .map(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+impl CommandRunner for SystemRunner {
+    fn run(&self, program: &str, args: &[&str], stdin: Option<&[u8]>) -> Result<Output, RunError> {
+        self.run_bounded(program, args, stdin, MAX_OUTPUT_BYTES, MAX_STDERR_BYTES)
     }
 
     fn available(&self, program: &str) -> bool {
@@ -185,6 +264,8 @@ pub mod fake {
 
 #[cfg(test)]
 mod tests {
+    use std::time::{Duration, Instant};
+
     use super::*;
 
     #[test]
@@ -221,5 +302,67 @@ mod tests {
         let failed = runner.run("false", &[], None).expect("false");
         assert!(!failed.success());
         assert_eq!(failed.status, 1);
+    }
+
+    #[test]
+    fn large_stdin_and_mixed_streams_do_not_deadlock() {
+        let runner = SystemRunner;
+        // cat liest 1 MiB, während wir stdout lesen: ohne eigene Threads
+        // liefe einer der Puffer voll.
+        let big = vec![b'x'; 1024 * 1024];
+        let output = runner.run("cat", &[], Some(&big)).expect("cat");
+        assert_eq!(output.stdout.len(), big.len());
+        let output = runner
+            .run("sh", &["-c", "printf err >&2; printf out"], None)
+            .expect("sh");
+        assert_eq!(output.stdout, b"out");
+        assert_eq!(output.stderr, "err");
+    }
+
+    #[test]
+    fn oversized_output_stops_the_process_promptly_and_reaps_it() {
+        let runner = SystemRunner;
+        let before = zombie_children();
+        let started = Instant::now();
+        // `yes` liefert unendlich viel; ohne Begrenzung käme dieser Test nie zurück.
+        let result = runner.run_bounded("yes", &["querencia"], None, 256 * 1024, MAX_STDERR_BYTES);
+        assert_eq!(result, Err(RunError::Oversized("yes".into())));
+        assert!(
+            started.elapsed() < Duration::from_secs(10),
+            "Begrenzung muss beim Lesen greifen, nicht erst am Ende"
+        );
+        // Dasselbe für stderr.
+        let result = runner.run_bounded(
+            "sh",
+            &["-c", "yes querencia >&2"],
+            None,
+            MAX_OUTPUT_BYTES,
+            64 * 1024,
+        );
+        assert_eq!(result, Err(RunError::Oversized("sh".into())));
+        assert_eq!(
+            zombie_children(),
+            before,
+            "beendete Kinder sind eingesammelt"
+        );
+    }
+
+    /// Zombie-Kinder dieses Testprozesses laut /proc.
+    fn zombie_children() -> usize {
+        let me = std::process::id().to_string();
+        std::fs::read_dir("/proc")
+            .map(|entries| {
+                entries
+                    .flatten()
+                    .filter_map(|entry| std::fs::read_to_string(entry.path().join("status")).ok())
+                    .filter(|status| {
+                        status.contains("State:\tZ")
+                            && status
+                                .lines()
+                                .any(|line| line.strip_prefix("PPid:\t") == Some(me.as_str()))
+                    })
+                    .count()
+            })
+            .unwrap_or(0)
     }
 }
