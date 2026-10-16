@@ -19,6 +19,8 @@ pub enum Scope {
     /// Alle Ausgaben zusammen (grim ohne `-g`/`-o`).
     Everything,
     Region(Region),
+    /// Eine Ausgabe nach Namen (grim `-o`), z. B. ein Vollbildfenster.
+    Output(String),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -84,12 +86,24 @@ fn slurp_cancelled(stderr: &str) -> bool {
 pub fn capture(runner: &dyn CommandRunner, scope: &Scope) -> Result<Png, CaptureError> {
     let geometry;
     let mut args: Vec<&str> = vec!["-t", "png", "-l", "1"];
-    if let Scope::Region(region) = scope {
-        geometry = region
-            .validated()
-            .map_err(CaptureError::Geometry)?
-            .grim_argument();
-        args.extend(["-g", geometry.as_str()]);
+    match scope {
+        Scope::Everything => {}
+        Scope::Region(region) => {
+            geometry = region
+                .validated()
+                .map_err(CaptureError::Geometry)?
+                .grim_argument();
+            args.extend(["-g", geometry.as_str()]);
+        }
+        Scope::Output(name) => {
+            if name.is_empty() || name.len() > 64 || name.chars().any(char::is_control) {
+                return Err(CaptureError::Failed {
+                    status: -1,
+                    stderr: format!("ungültiger Ausgabename {name:?}"),
+                });
+            }
+            args.extend(["-o", name.as_str()]);
+        }
     }
     args.push("-");
     let output = runner.run(GRIM, &args, None)?;
@@ -222,6 +236,18 @@ mod tests {
             runner.calls.borrow()[0].args,
             vec!["-t", "png", "-l", "1", "-"]
         );
+
+        let runner = FakeRunner::default().respond(GRIM, exit(0, &png, ""));
+        capture(&runner, &Scope::Output("HDMI-A-1".into())).expect("output capture");
+        assert_eq!(
+            runner.calls.borrow()[0].args,
+            vec!["-t", "png", "-l", "1", "-o", "HDMI-A-1", "-"]
+        );
+        for bad in ["", "a\nb"] {
+            let runner = FakeRunner::default();
+            assert!(capture(&runner, &Scope::Output(bad.into())).is_err());
+            assert!(runner.calls.borrow().is_empty(), "grim nicht gestartet");
+        }
     }
 
     #[test]

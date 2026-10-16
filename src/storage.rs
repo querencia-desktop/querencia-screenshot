@@ -22,6 +22,9 @@ pub enum SaveError {
     /// Auch nach vielen Suffixen existierte jeder Kandidat bereits.
     NoFreeName(PathBuf),
     Write(PathBuf, std::io::Error),
+    /// Vom Benutzer gewählter Name ist schon vergeben (nie überschreiben).
+    Exists(PathBuf),
+    InvalidName(String),
 }
 
 impl fmt::Display for SaveError {
@@ -36,11 +39,24 @@ impl fmt::Display for SaveError {
             }
             Self::NotADirectory(path) => write!(f, "„{}“ ist kein Ordner", path.display()),
             Self::NoFreeName(path) => write!(f, "Kein freier Dateiname in „{}“", path.display()),
+            Self::Write(path, error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+                write!(
+                    f,
+                    "Keine Schreibberechtigung für „{}“ – bitte einen anderen Ordner wählen",
+                    path.display()
+                )
+            }
             Self::Write(path, error) => write!(
                 f,
                 "„{}“ kann nicht geschrieben werden: {error}",
                 path.display()
             ),
+            Self::Exists(path) => write!(
+                f,
+                "„{}“ existiert bereits – bitte einen anderen Namen wählen",
+                path.display()
+            ),
+            Self::InvalidName(reason) => write!(f, "Ungültiger Dateiname: {reason}"),
         }
     }
 }
@@ -92,6 +108,73 @@ pub fn unique_path(directory: &Path, name: &str) -> Result<PathBuf, SaveError> {
         }
     }
     Err(SaveError::NoFreeName(directory.to_path_buf()))
+}
+
+/// Prüft einen vom Benutzer eingegebenen Dateinamen und ergänzt `.png`.
+/// Unicode ist erlaubt; verboten sind Pfadtrenner, Steuerzeichen, „.“ und
+/// „..“ sowie Namen, die das Dateisystem nicht fassen kann.
+pub fn validate_name(input: &str) -> Result<String, SaveError> {
+    let name = input.trim();
+    let invalid = |reason: &str| Err(SaveError::InvalidName(reason.to_owned()));
+    if name.is_empty() {
+        return invalid("der Name ist leer");
+    }
+    if name.contains('/') {
+        return invalid("„/“ ist im Namen nicht erlaubt");
+    }
+    if name.chars().any(char::is_control) {
+        return invalid("Steuerzeichen sind im Namen nicht erlaubt");
+    }
+    if name == "." || name == ".." {
+        return invalid("„.“ und „..“ sind keine Dateinamen");
+    }
+    let name = if name.to_lowercase().ends_with(".png") {
+        name.to_owned()
+    } else {
+        format!("{name}.png")
+    };
+    if name.len() > 255 {
+        return invalid("der Name ist zu lang (höchstens 255 Byte)");
+    }
+    Ok(name)
+}
+
+/// Speichert unter genau `name` in `directory` (Ordner bei Bedarf 0700,
+/// Datei 0600, `create_new`): Ist der Name vergeben, wird nichts
+/// überschrieben, sondern `SaveError::Exists` gemeldet.
+pub fn save_exact(directory: &Path, name: &str, png: &Png) -> Result<PathBuf, SaveError> {
+    use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
+    let name = validate_name(name)?;
+    if fs::symlink_metadata(directory).is_err() {
+        fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(directory)
+            .map_err(|error| SaveError::CreateDirectory(directory.to_path_buf(), error))?;
+    }
+    if !directory.is_dir() {
+        return Err(SaveError::NotADirectory(directory.to_path_buf()));
+    }
+    let path = directory.join(&name);
+    let mut file = match OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(&path)
+    {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+            return Err(SaveError::Exists(path));
+        }
+        Err(error) => return Err(SaveError::Write(path, error)),
+    };
+    if let Err(error) = file.write_all(png.bytes()).and_then(|()| file.sync_all()) {
+        // Keine halbe Datei zurücklassen.
+        drop(file);
+        let _ = fs::remove_file(&path);
+        return Err(SaveError::Write(path, error));
+    }
+    Ok(path)
 }
 
 /// Legt den Ordner an (0700), wählt einen freien Namen und schreibt die
@@ -219,6 +302,78 @@ mod tests {
             "erste Datei unverändert"
         );
         let _ = fs::remove_dir_all(dir.parent().and_then(Path::parent).expect("scratch root"));
+    }
+
+    #[test]
+    fn user_names_accept_unicode_and_get_the_png_suffix() {
+        assert_eq!(
+            validate_name("  Übersicht – Größe 10 € „Test“ ").expect("ok"),
+            "Übersicht – Größe 10 € „Test“.png"
+        );
+        assert_eq!(validate_name("Bild.PNG").expect("ok"), "Bild.PNG");
+        assert_eq!(validate_name("a.png").expect("ok"), "a.png");
+        assert_eq!(validate_name("Bericht.jpg").expect("ok"), "Bericht.jpg.png");
+        for bad in ["", "   ", "a/b", "../x", ".", "..", "zeile\nzwei", "tab\tx"] {
+            assert!(
+                matches!(validate_name(bad), Err(SaveError::InvalidName(_))),
+                "{bad:?}"
+            );
+        }
+        assert!(validate_name(&"ä".repeat(125)).is_ok(), "250 + 4 Byte");
+        assert!(validate_name(&"ä".repeat(126)).is_err(), "252 + 4 Byte");
+    }
+
+    #[test]
+    fn exact_save_never_overwrites_and_keeps_unicode_names() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = scratch("exact");
+        let dir = root.join("Bilder").join("Screenshots");
+        let png = Png::new(sample(3, 2)).expect("png");
+        let path = save_exact(&dir, "Größe – Ü", &png).expect("saved");
+        assert_eq!(path, dir.join("Größe – Ü.png"));
+        assert_eq!(fs::read(&path).expect("read"), sample(3, 2));
+        assert_eq!(
+            fs::metadata(&path).expect("meta").permissions().mode() & 0o777,
+            0o600
+        );
+        let other = Png::new(sample(9, 9)).expect("png");
+        assert!(matches!(
+            save_exact(&dir, "Größe – Ü.png", &other),
+            Err(SaveError::Exists(_))
+        ));
+        assert_eq!(fs::read(&path).expect("read"), sample(3, 2), "unverändert");
+        std::os::unix::fs::symlink("/nonexistent", dir.join("link.png")).expect("link");
+        assert!(matches!(
+            save_exact(&dir, "link", &other),
+            Err(SaveError::Exists(_))
+        ));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn exact_save_reports_missing_permission_and_files_in_the_way() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = scratch("exact-refuse");
+        fs::create_dir_all(&root).expect("scratch");
+        let png = Png::new(sample(1, 1)).expect("png");
+        let file = root.join("Screenshots");
+        fs::write(&file, b"").expect("file");
+        let error = save_exact(&file, "a", &png).expect_err("file");
+        assert!(matches!(error, SaveError::NotADirectory(_)));
+        assert!(error.to_string().contains("ist kein Ordner"));
+        let locked = root.join("gesperrt");
+        fs::create_dir(&locked).expect("dir");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o500)).expect("chmod");
+        let error = save_exact(&locked, "a", &png).expect_err("readonly");
+        assert!(
+            error.to_string().starts_with("Keine Schreibberechtigung"),
+            "{error}"
+        );
+        assert!(fs::read_dir(&locked).expect("list").next().is_none());
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o700)).expect("chmod");
+        let error = save_exact(&locked.join("x").join("y"), "a", &png);
+        assert!(error.is_ok(), "nach Freigabe anlegbar");
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]

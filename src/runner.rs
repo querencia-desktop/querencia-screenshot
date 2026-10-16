@@ -75,6 +75,15 @@ pub trait CommandRunner {
     /// und sammelt die Ausgabe. Programme werden nur über den PATH gefunden.
     fn run(&self, program: &str, args: &[&str], stdin: Option<&[u8]>) -> Result<Output, RunError>;
 
+    /// Für Programme, die nach getaner Arbeit einen Hintergrundprozess
+    /// zurücklassen (wl-copy bietet die Zwischenablage weiter an): `stdin`
+    /// wird geschrieben, stdout und stderr werden **nicht** als Rohr gehalten
+    /// (stderr geht in die eigene Fehlerausgabe, also ins Protokoll), und
+    /// gewartet wird nur auf das Ende des gestarteten Prozesses. Mit `run`
+    /// hält der Hintergrundprozess stderr offen, und der Aufruf endet erst,
+    /// wenn ein anderes Programm die Zwischenablage übernimmt.
+    fn run_detaching(&self, program: &str, args: &[&str], stdin: &[u8]) -> Result<i32, RunError>;
+
     fn available(&self, program: &str) -> bool;
 }
 
@@ -276,6 +285,26 @@ impl CommandRunner for SystemRunner {
         self.run_bounded(program, args, stdin, MAX_OUTPUT_BYTES, MAX_STDERR_BYTES)
     }
 
+    fn run_detaching(&self, program: &str, args: &[&str], stdin: &[u8]) -> Result<i32, RunError> {
+        let executable =
+            Self::locate(program).ok_or_else(|| RunError::Missing(program.to_owned()))?;
+        let spawn_error =
+            |error: std::io::Error| RunError::Spawn(program.to_owned(), error.to_string());
+        let mut child = Command::new(&executable)
+            .args(args.iter().map(OsStr::new))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .map_err(spawn_error)?;
+        if let Some(pipe) = child.stdin.take() {
+            // Ein Kind, das vorzeitig schließt, meldet sich über seinen Status.
+            let _ = write_all_then_close(pipe, stdin);
+        }
+        let status = child.wait().map_err(spawn_error)?;
+        Ok(status.code().unwrap_or(-1))
+    }
+
     fn available(&self, program: &str) -> bool {
         Self::locate(program).is_some()
     }
@@ -332,6 +361,16 @@ pub mod fake {
             responses.remove(position).1
         }
 
+        fn run_detaching(
+            &self,
+            program: &str,
+            args: &[&str],
+            stdin: &[u8],
+        ) -> Result<i32, RunError> {
+            self.run(program, args, Some(stdin))
+                .map(|output| output.status)
+        }
+
         fn available(&self, program: &str) -> bool {
             self.responses.borrow().iter().any(|(name, response)| {
                 name == program && !matches!(response, Err(RunError::Missing(_)))
@@ -345,6 +384,26 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::*;
+
+    #[test]
+    fn detaching_run_does_not_wait_for_a_background_child() {
+        // Wie wl-copy: liest stdin, lässt einen Hintergrundprozess mit
+        // geerbtem stderr zurück und endet selbst sofort.
+        let started = Instant::now();
+        let status = SystemRunner
+            .run_detaching("sh", &["-c", "cat >/dev/null; sleep 3 & exit 3"], b"daten")
+            .expect("run");
+        assert_eq!(status, 3);
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "wartete auf das Hintergrundkind: {:?}",
+            started.elapsed()
+        );
+        assert_eq!(
+            SystemRunner.run_detaching("querencia-gibt-es-nicht", &[], b""),
+            Err(RunError::Missing("querencia-gibt-es-nicht".into()))
+        );
+    }
 
     #[test]
     fn runs_programs_from_the_path_with_explicit_arguments() {

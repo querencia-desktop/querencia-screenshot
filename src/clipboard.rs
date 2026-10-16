@@ -30,17 +30,20 @@ impl fmt::Display for ClipboardError {
 }
 
 /// Übergibt die Bilddaten binär über stdin; wl-copy bleibt als Anbieter im
-/// Hintergrund, bis die Zwischenablage anderweitig belegt wird.
+/// Hintergrund, bis die Zwischenablage anderweitig belegt wird. Deshalb
+/// `run_detaching`: Mit `run` hielte dieser Hintergrundprozess stderr offen
+/// und das Kopieren endete nie (QS-1, isoliert nachgewiesen). Meldungen von
+/// wl-copy stehen im Protokoll (stderr).
 pub fn copy_png(runner: &dyn CommandRunner, png: &Png) -> Result<(), ClipboardError> {
-    let output = runner
-        .run(WL_COPY, &["--type", MIME_TYPE], Some(png.bytes()))
+    let status = runner
+        .run_detaching(WL_COPY, &["--type", MIME_TYPE], png.bytes())
         .map_err(ClipboardError::Run)?;
-    if output.success() {
+    if status == 0 {
         Ok(())
     } else {
         Err(ClipboardError::Failed {
-            status: output.status,
-            stderr: output.stderr,
+            status,
+            stderr: String::new(),
         })
     }
 }
@@ -92,7 +95,8 @@ mod tests {
         );
         assert_eq!(
             copy_png(&failed, &png).expect_err("failure").to_string(),
-            "Kopieren fehlgeschlagen: no wayland display"
+            "Kopieren fehlgeschlagen (Status 1)",
+            "stderr von wl-copy steht im Protokoll, nicht in der Meldung"
         );
     }
 }

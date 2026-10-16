@@ -233,7 +233,7 @@ pub fn present(application: &gtk::Application) {
     window.present();
 }
 
-fn button(label: &str, icon_names: &[&str]) -> gtk::Button {
+pub(crate) fn button(label: &str, icon_names: &[&str]) -> gtk::Button {
     let content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     if let Some(image) = theme_icon(icon_names) {
         content.append(&image);
@@ -345,7 +345,7 @@ fn show_capture(state: &Rc<State>, png: screenshot::Png) {
 /// mit der Zielgröße als natürlicher Größe, damit `Picture` nicht die volle
 /// Bildgröße anfordert und das Fenster nicht aufbläht. Kleine Aufnahmen
 /// werden nicht vergrößert.
-fn preview_paintable(texture: &gdk::Texture) -> Option<gdk::Paintable> {
+pub(crate) fn preview_paintable(texture: &gdk::Texture) -> Option<gdk::Paintable> {
     let (width, height) = preview_size(texture.width(), texture.height());
     let snapshot = gtk::Snapshot::new();
     snapshot.append_scaled_texture(

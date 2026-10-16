@@ -8,6 +8,9 @@ publish = false
 
 [dependencies]
 gtk = { package = "gtk4", version = "0.11", features = ["v4_12"] }
+# Aktives Fenster für --window (wlr-foreign-toplevel-management, labwc)
+wayland-client = "0.31"
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }
 
 [profile.release]
 lto = true
