@@ -2,7 +2,8 @@
 
 //! Bildeditor nach der Aufnahme (QS-0d): große Vorschau, klassische
 //! Menüleiste und Werkzeugleiste, Markierungen (Stift, Kreis/Ellipse,
-//! Rechteck, Pfeil, Text) in fünf Farben und drei Stärken, Rückgängig und
+//! Rechteck, Pfeil, Text) in acht Grundfarben (aufklappbare Palette) oder
+//! einer benutzerdefinierten Farbe und drei Stärken, Rückgängig und
 //! Wiederholen, Speichern und Kopieren des fertigen Bildes.
 //!
 //! Die Aufnahme bleibt unverändert (`original`); Markierungen sind eigene
@@ -108,6 +109,8 @@ struct Editor {
     text_at: Cell<Option<Point>>,
     tool: Cell<Tool>,
     color: Cell<Color>,
+    /// Farbschaltfläche der Werkzeugleiste (gesetzt, sobald sie gebaut ist).
+    palette: RefCell<Option<Palette>>,
     width: Cell<Width>,
     fit: Cell<bool>,
     busy: Cell<bool>,
@@ -146,9 +149,29 @@ impl Editor {
         let text_mode = self.text_box.is_visible();
         let marks = self.marks.borrow();
         for name in [
-            "new", "save", "copy", "close", "tool", "color", "width", "fit",
+            "new",
+            "save",
+            "copy",
+            "close",
+            "tool",
+            "color",
+            "palette",
+            "color-custom",
+            "width",
+            "fit",
         ] {
             self.set_enabled(name, !text_mode && !self.busy.get());
+        }
+        if let Some(palette) = self.palette.borrow().as_ref() {
+            let color = self.color.get();
+            palette.button.set_sensitive(!text_mode && !self.busy.get());
+            palette.button.set_tooltip_text(Some(&format!(
+                "Farbe: {} – Farbpalette öffnen (F)",
+                color.label()
+            )));
+            palette.current.queue_draw();
+            palette.custom_swatch.set_visible(color.is_custom());
+            palette.custom_swatch.queue_draw();
         }
         self.set_enabled("undo", !text_mode && marks.can_undo());
         self.set_enabled("redo", !text_mode && marks.can_redo());
@@ -277,7 +300,8 @@ pub fn open(application: &gtk::Application, source: Source) {
         drag_start: Cell::new(None),
         text_at: Cell::new(None),
         tool: Cell::new(Tool::Ellipse),
-        color: Cell::new(Color::Red),
+        color: Cell::new(Color::RED),
+        palette: RefCell::new(None),
         width: Cell::new(Width::Medium),
         fit: Cell::new(true),
         busy: Cell::new(false),
@@ -289,7 +313,7 @@ pub fn open(application: &gtk::Application, source: Source) {
     install_actions(application, &editor);
     let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
     root.append(&menu_bar());
-    root.append(&toolbar());
+    root.append(&toolbar(&editor));
     root.append(&overlay);
     root.append(&status);
     window.set_child(Some(&root));
@@ -396,11 +420,20 @@ fn install_actions(application: &gtk::Application, editor: &Rc<Editor>) {
             .map(|tool| editor.tool.set(tool))
             .is_some()
     });
-    stateful("color", Color::Red.id(), |editor, id| {
-        Color::from_id(id)
-            .map(|color| editor.color.set(color))
-            .is_some()
+    stateful("color", &Color::RED.id(), |editor, id| {
+        let Some(color) = Color::from_id(id) else {
+            return false;
+        };
+        editor.color.set(color);
+        println!("querencia-screenshot: Farbe: {}", color.label());
+        true
     });
+    simple("palette", |editor| {
+        if let Some(palette) = editor.palette.borrow().as_ref() {
+            palette.button.popup();
+        }
+    });
+    simple("color-custom", choose_custom_color);
     stateful("width", Width::Medium.id(), |editor, id| {
         Width::from_id(id)
             .map(|width| editor.width.set(width))
@@ -427,6 +460,7 @@ fn install_actions(application: &gtk::Application, editor: &Rc<Editor>) {
         ("win.close", &["<Control>w"]),
         ("win.undo", &["<Control>z"]),
         ("win.redo", &["<Control><Shift>z", "<Control>y"]),
+        ("win.palette", &["f"]),
     ] {
         application.set_accels_for_action(action, accels);
     }
@@ -485,12 +519,13 @@ fn menu_bar() -> gtk::PopoverMenuBar {
     }
     tools.append_section(None, &section);
     let colors = gio::Menu::new();
-    for color in Color::ALL {
-        colors.append(
-            Some(color.label()),
-            Some(&format!("win.color::{}", color.id())),
-        );
+    for named in &Color::PALETTE {
+        colors.append(Some(named.label), Some(&format!("win.color::{}", named.id)));
     }
+    colors.append(
+        Some("_Benutzerdefinierte Farbe …"),
+        Some("win.color-custom"),
+    );
     tools.append_section(Some("Farbe"), &colors);
     let widths = gio::Menu::new();
     for width in Width::ALL {
@@ -568,16 +603,315 @@ fn tool_icon(tool: Tool) -> gtk::DrawingArea {
     })
 }
 
-fn color_icon(color: Color) -> gtk::DrawingArea {
-    drawn_icon(16, move |cr, s| {
-        let (r, g, b) = color.rgb();
-        cr.rectangle(1.5, 1.5, s - 3.0, s - 3.0);
-        cr.set_source_rgb(r, g, b);
-        cr.fill_preserve().ok();
-        cr.set_source_rgb(0.3, 0.3, 0.3);
-        cr.set_line_width(1.0);
-        cr.stroke().ok();
-    })
+/// Farbfeld mit dezentem dunklem Rand.
+fn paint_swatch(cr: &cairo::Context, x: f64, y: f64, w: f64, h: f64, color: Color) {
+    let (r, g, b) = color.rgb();
+    cr.rectangle(x + 0.5, y + 0.5, w - 1.0, h - 1.0);
+    cr.set_source_rgb(r, g, b);
+    cr.fill_preserve().ok();
+    cr.set_source_rgb(0.31, 0.31, 0.31);
+    cr.set_line_width(1.0);
+    cr.stroke().ok();
+}
+
+/// Farbschaltfläche der Werkzeugleiste: zeigt die aktuelle Farbe, klappt
+/// die Palette (Popover) auf.
+struct Palette {
+    button: gtk::MenuButton,
+    popover: gtk::Popover,
+    /// Farbfeld auf der Schaltfläche.
+    current: gtk::DrawingArea,
+    /// Farbfeld vor „Benutzerdefinierte Farbe …“, nur bei eigener Farbe.
+    custom_swatch: gtk::DrawingArea,
+}
+
+fn current_color(weak: &Weak<Editor>) -> Color {
+    upgrade(weak).map_or(Color::RED, |editor| editor.color.get())
+}
+
+/// Eine Grundfarbe im Palettenraster; die gewählte ist eingedrückt,
+/// orange umrandet und mit einem Häkchen versehen.
+fn palette_swatch(name: &'static str, label: &'static str, color: Color) -> gtk::ToggleButton {
+    let toggle = gtk::ToggleButton::new();
+    let area = gtk::DrawingArea::new();
+    area.set_content_width(26);
+    area.set_content_height(18);
+    let weak_toggle = toggle.downgrade();
+    area.set_draw_func(move |_, cr, w, h| {
+        let (w, h) = (f64::from(w), f64::from(h));
+        paint_swatch(cr, 0.0, 0.0, w, h, color);
+        if weak_toggle
+            .upgrade()
+            .is_some_and(|toggle| toggle.is_active())
+        {
+            let mark = if color.is_light() { 0.0 } else { 1.0 };
+            cr.set_source_rgb(mark, mark, mark);
+            cr.set_line_width(2.0);
+            cr.set_line_cap(cairo::LineCap::Round);
+            cr.set_line_join(cairo::LineJoin::Round);
+            cr.move_to(w * 0.30, h * 0.52);
+            cr.line_to(w * 0.45, h * 0.75);
+            cr.line_to(w * 0.72, h * 0.25);
+            cr.stroke().ok();
+        }
+    });
+    toggle.set_child(Some(&area));
+    toggle.connect_toggled(move |_| area.queue_draw());
+    toggle.set_tooltip_text(Some(label));
+    toggle.update_property(&[gtk::accessible::Property::Label(label)]);
+    toggle.set_action_name(Some("win.color"));
+    toggle.set_action_target_value(Some(&name.to_variant()));
+    toggle.add_css_class("qs-swatch");
+    toggle
+}
+
+fn palette_button(editor: &Rc<Editor>) -> gtk::MenuButton {
+    let weak = Rc::downgrade(editor);
+    let current = gtk::DrawingArea::new();
+    current.set_content_width(32);
+    current.set_content_height(18);
+    current.set_draw_func(move |_, cr, w, h| {
+        let (w, h) = (f64::from(w), f64::from(h));
+        paint_swatch(cr, 0.0, 0.0, w - 10.0, h, current_color(&weak));
+        // Klapppfeil wie bei klassischen Auswahlknöpfen
+        cr.set_source_rgb(0.19, 0.19, 0.19);
+        cr.move_to(w - 7.0, h / 2.0 - 2.0);
+        cr.line_to(w - 1.0, h / 2.0 - 2.0);
+        cr.line_to(w - 4.0, h / 2.0 + 2.0);
+        cr.close_path();
+        cr.fill().ok();
+    });
+
+    let popover = gtk::Popover::new();
+    let grid = gtk::Grid::new();
+    grid.set_row_spacing(3);
+    grid.set_column_spacing(3);
+    for (i, named) in Color::PALETTE.iter().enumerate() {
+        let toggle = palette_swatch(named.id, named.label, named.color);
+        let weak_popover = popover.downgrade();
+        toggle.connect_clicked(move |_| {
+            if let Some(popover) = weak_popover.upgrade() {
+                popover.popdown();
+            }
+        });
+        grid.attach(&toggle, (i % 4) as i32, (i / 4) as i32, 1, 1);
+    }
+
+    let weak = Rc::downgrade(editor);
+    let custom_swatch = gtk::DrawingArea::new();
+    custom_swatch.set_content_width(16);
+    custom_swatch.set_content_height(12);
+    custom_swatch.set_valign(gtk::Align::Center);
+    custom_swatch.set_draw_func(move |_, cr, w, h| {
+        paint_swatch(
+            cr,
+            0.0,
+            0.0,
+            f64::from(w),
+            f64::from(h),
+            current_color(&weak),
+        );
+    });
+    custom_swatch.set_visible(false);
+    let custom_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    custom_box.append(&custom_swatch);
+    custom_box.append(&gtk::Label::with_mnemonic("_Benutzerdefinierte Farbe …"));
+    let custom = gtk::Button::new();
+    custom.set_child(Some(&custom_box));
+    custom.set_tooltip_text(Some("Eine beliebige Farbe im Farbdialog wählen"));
+    custom.set_action_name(Some("win.color-custom"));
+    custom.add_css_class("qs-custom");
+
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 4);
+    content.append(&grid);
+    content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+    content.append(&custom);
+    popover.set_child(Some(&content));
+    popover.set_has_arrow(false);
+    popover.set_position(gtk::PositionType::Bottom);
+    popover.add_css_class("qs-palette");
+    // Tastatur: beim Öffnen steht der Fokus auf der gewählten Farbe
+    // (sonst auf der ersten); Pfeiltasten wandern im Raster, Leertaste oder
+    // Eingabetaste wählen, Esc schließt.
+    popover.connect_map(move |_| {
+        let mut child = grid.first_child();
+        let mut first = None;
+        while let Some(widget) = child {
+            if let Ok(toggle) = widget.clone().downcast::<gtk::ToggleButton>() {
+                if toggle.is_active() {
+                    toggle.grab_focus();
+                    return;
+                }
+                first.get_or_insert(toggle);
+            }
+            child = widget.next_sibling();
+        }
+        if let Some(toggle) = first {
+            toggle.grab_focus();
+        }
+    });
+
+    let button = gtk::MenuButton::new();
+    button.set_child(Some(&current));
+    button.set_popover(Some(&popover));
+    button.set_focus_on_click(false);
+    button.add_css_class("qs-palette-button");
+    button.update_property(&[gtk::accessible::Property::Label("Farbe")]);
+    editor.palette.replace(Some(Palette {
+        button: button.clone(),
+        popover,
+        current,
+        custom_swatch,
+    }));
+    button
+}
+
+/// „Benutzerdefinierte Farbe …“: kleines Fenster mit dem GTK-Farbwähler
+/// (Farbfeld, Farbton, Eingabe „#RRGGBB“), vorbelegt mit der aktuellen
+/// Farbe. Die Grundfarben bleiben in der kompakten Palette.
+///
+/// Nicht `gtk::ColorDialog`: der zeichnet eine eigene GTK-Kopfleiste (gegen
+/// die labwc-Fensterdekoration, siehe ui.rs) und spricht ohne installierte
+/// GTK-Übersetzungen Englisch („Cancel“, „Select“). Hier: labwc-Titelleiste,
+/// deutsche Knöpfe unten wie in GNOME 2.
+fn choose_custom_color(editor: &Rc<Editor>) {
+    if let Some(palette) = editor.palette.borrow().as_ref() {
+        palette.popover.popdown();
+    }
+    let window = gtk::Window::builder()
+        .title("Benutzerdefinierte Farbe")
+        .transient_for(&editor.window)
+        .modal(true)
+        .resizable(false)
+        .build();
+    window.add_css_class("qs-window");
+    window.add_css_class("qs-color-window");
+    // Kein set_icon_name, siehe „Fenstersymbol“ in ui.rs.
+
+    // GtkColorChooserWidget ist seit GTK 4.10 als veraltet markiert, aber
+    // vorhanden; sein Ersatz `gtk::ColorDialog` passt hier nicht (oben).
+    #[allow(deprecated)]
+    let chooser = {
+        use gtk::prelude::ColorChooserExt as _;
+        let chooser = gtk::ColorChooserWidget::new();
+        chooser.set_use_alpha(false);
+        let (r, g, b) = editor.color.get().rgb();
+        chooser.set_rgba(&gdk::RGBA::new(r as f32, g as f32, b as f32, 1.0));
+        chooser.set_show_editor(true);
+        chooser
+    };
+    let hint = gtk::Label::new(Some(
+        "Farbton und Farbfeld wählen oder „#RRGGBB“ eingeben.",
+    ));
+    hint.set_xalign(0.0);
+    hint.add_css_class("qs-hint");
+    let cancel = ui::button("Abbrechen", &["process-stop", "window-close"]);
+    let apply = ui::button("Übernehmen", &["dialog-ok", "dialog-apply", "gtk-apply"]);
+    let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    buttons.set_halign(gtk::Align::End);
+    buttons.append(&cancel);
+    buttons.append(&apply);
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    content.set_margin_top(10);
+    content.set_margin_bottom(10);
+    content.set_margin_start(10);
+    content.set_margin_end(10);
+    content.append(&hint);
+    content.append(&chooser);
+    content.append(&buttons);
+    window.set_child(Some(&content));
+    window.set_default_widget(Some(&apply));
+
+    // finish(Some(farbe)) übernimmt, finish(None) bricht ab; beides schließt.
+    let weak = Rc::downgrade(editor);
+    let finish: Rc<dyn Fn(Option<Color>)> = Rc::new({
+        let window = window.downgrade();
+        move |choice: Option<Color>| {
+            let Some(window) = window.upgrade() else {
+                return;
+            };
+            match (choice, upgrade(&weak)) {
+                (Some(color), Some(editor)) => {
+                    if WidgetExt::activate_action(
+                        &editor.window,
+                        "win.color",
+                        Some(&color.id().to_variant()),
+                    )
+                    .is_ok()
+                    {
+                        editor.say(&format!("Farbe gewählt: {}", color.label()));
+                    }
+                }
+                _ => println!("querencia-screenshot: Farbdialog abgebrochen"),
+            }
+            window.destroy();
+        }
+    });
+    let chosen = {
+        let chooser = chooser.clone();
+        move || {
+            #[allow(deprecated)]
+            let rgba = gtk::prelude::ColorChooserExt::rgba(&chooser);
+            Color::from_unit(rgba.red(), rgba.green(), rgba.blue())
+        }
+    };
+    let done = finish.clone();
+    cancel.connect_clicked(move |_| done(None));
+    let (done, color) = (finish.clone(), chosen.clone());
+    apply.connect_clicked(move |_| done(Some(color())));
+    // Doppelklick auf ein Farbfeld übernimmt wie in GNOME 2.
+    let (done, color) = (finish.clone(), chosen.clone());
+    #[allow(deprecated)]
+    gtk::prelude::ColorChooserExt::connect_color_activated(&chooser, move |_, _| {
+        done(Some(color()))
+    });
+    let done = finish.clone();
+    window.connect_close_request(move |_| {
+        done(None);
+        glib::Propagation::Stop
+    });
+    // Tastatur (vor den Kindern, sonst schlucken Regler und Eingabefeld die
+    // Tasten): Esc bricht ab. Eingabetaste übernimmt – im Eingabefeld den
+    // getippten Wert „#RRGGBB“, auf Regler und Farbfeld die gezeigte Farbe;
+    // auf einem Knopf löst sie wie gewohnt diesen Knopf aus.
+    let keys = gtk::EventControllerKey::new();
+    keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let window_weak = window.downgrade();
+    keys.connect_key_pressed(move |_, key, _, _| {
+        if key == gdk::Key::Escape {
+            finish(None);
+            return glib::Propagation::Stop;
+        }
+        if !matches!(key, gdk::Key::Return | gdk::Key::KP_Enter) {
+            return glib::Propagation::Proceed;
+        }
+        let focus = window_weak.upgrade().and_then(|window| GtkWindowExt::focus(&window));
+        match focus {
+            Some(widget) if widget.is::<gtk::Button>() => glib::Propagation::Proceed,
+            Some(widget) if widget.is::<gtk::Text>() => {
+                let typed = widget
+                    .downcast::<gtk::Text>()
+                    .map(|text| text.text().trim().to_owned())
+                    .unwrap_or_default();
+                let typed = if typed.starts_with('#') { typed } else { format!("#{typed}") };
+                match Color::from_id(&typed) {
+                    Some(color) => {
+                        finish(Some(color));
+                        glib::Propagation::Stop
+                    }
+                    // Kein gültiger Wert: das Eingabefeld meldet es selbst.
+                    None => glib::Propagation::Proceed,
+                }
+            }
+            _ => {
+                finish(Some(chosen()));
+                glib::Propagation::Stop
+            }
+        }
+    });
+    window.add_controller(keys);
+    window.present();
+    println!("querencia-screenshot: Farbdialog geöffnet");
 }
 
 fn width_icon(width: Width) -> gtk::DrawingArea {
@@ -675,7 +1009,7 @@ fn separator() -> gtk::Separator {
     separator
 }
 
-fn toolbar() -> gtk::Box {
+fn toolbar(editor: &Rc<Editor>) -> gtk::Box {
     let bar = gtk::Box::new(gtk::Orientation::Horizontal, 2);
     bar.add_css_class("qs-toolbar");
     bar.append(&action_button(
@@ -692,8 +1026,10 @@ fn toolbar() -> gtk::Box {
         "Bild mit Markierungen als PNG speichern (Strg+S)",
         "win.save",
     ));
+    // Kurze Beschriftung, damit die Werkzeugleiste auch auf 1024 Pixel
+    // breiten Bildschirmen ganz hineinpasst; der Hinweis nennt das Ziel.
     bar.append(&action_button(
-        Some("In Zwischenablage kopieren"),
+        Some("Kopieren"),
         &["edit-copy"],
         None,
         "Bild mit Markierungen in die Zwischenablage kopieren (Strg+C)",
@@ -731,16 +1067,7 @@ fn toolbar() -> gtk::Box {
         ));
     }
     bar.append(&separator());
-    for color in Color::ALL {
-        let toggle = radio(
-            &color_icon(color),
-            &format!("Farbe: {}", color.label()),
-            "win.color",
-            color.id(),
-        );
-        toggle.add_css_class("qs-color");
-        bar.append(&toggle);
-    }
+    bar.append(&palette_button(editor));
     bar.append(&separator());
     for width in Width::ALL {
         bar.append(&radio(

@@ -101,8 +101,7 @@ window.qs-editor .qs-toolbar {
   padding: 3px 4px;
 }
 
-window.qs-editor .qs-toolbar button,
-window.qs-editor .qs-toolbar togglebutton {
+window.qs-editor .qs-toolbar button {
   background: #e8e8e8;
   border: 1px solid #b0b0b0;
   border-radius: 2px;
@@ -114,8 +113,7 @@ window.qs-editor .qs-toolbar togglebutton {
   transition: none;
 }
 
-window.qs-editor .qs-toolbar button:hover,
-window.qs-editor .qs-toolbar togglebutton:hover {
+window.qs-editor .qs-toolbar button:hover {
   background: #f4f4f4;
 }
 
@@ -123,9 +121,11 @@ window.qs-editor .qs-toolbar button:disabled {
   opacity: 0.45;
 }
 
-/* Aktives Werkzeug, aktive Farbe und Stärke: eingedrückt und mit dem
-   Querencia-Orange (#f07746, wie die Menühervorhebung) umrandet. */
-window.qs-editor .qs-toolbar togglebutton:checked {
+/* Aktives Werkzeug und aktive Stärke: eingedrückt und mit dem
+   Querencia-Orange (#f07746, wie die Menühervorhebung) umrandet.
+   GTK 4 nennt Umschaltknöpfe im CSS „button.toggle“ (nicht „togglebutton“;
+   bis 0.2.1 griff diese Regel deshalb nicht). */
+window.qs-editor .qs-toolbar button.toggle:checked {
   background: #d6d2cd;
   border: 2px solid #f07746;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -155,4 +155,74 @@ window.qs-editor .qs-textbox {
   border: 1px solid #888888;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   padding: 4px;
+}
+
+/* ---- Farbpalette: eine Farbschaltfläche, Popover direkt darunter ------
+   Das Popover ist eine eigene Oberfläche; seine CSS-Knoten hängen nicht
+   unter window.qs-editor, daher ohne Fenster-Präfix. */
+
+window.qs-editor .qs-toolbar menubutton.qs-palette-button > button {
+  padding: 2px 4px;
+}
+
+window.qs-editor .qs-toolbar menubutton.qs-palette-button > button:checked {
+  background: #d6d2cd;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+popover.qs-palette > contents {
+  background: #f5f4f2;
+  border: 1px solid #888888;
+  border-radius: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  padding: 5px;
+}
+
+popover.qs-palette button.qs-swatch {
+  background: #e8e8e8;
+  border: 1px solid #b0b0b0;
+  border-radius: 2px;
+  box-shadow: none;
+  min-height: 0;
+  min-width: 0;
+  padding: 2px;
+}
+
+popover.qs-palette button.qs-swatch:hover {
+  background: #f4f4f4;
+  border-color: #707070;
+}
+
+/* Gewählte Farbe: eingedrückt, Querencia-Orange, Häkchen im Farbfeld */
+popover.qs-palette button.qs-swatch:checked {
+  background: #d6d2cd;
+  border: 2px solid #f07746;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  padding: 1px;
+}
+
+popover.qs-palette button:focus-visible {
+  outline: 1px dotted #303030;
+  outline-offset: 1px;
+}
+
+popover.qs-palette button.qs-custom {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  box-shadow: none;
+  min-height: 0;
+  padding: 3px 6px;
+}
+
+popover.qs-palette button.qs-custom:hover {
+  background: #dcd8d4;
+  border-color: #b0b0b0;
+}
+
+popover.qs-palette separator {
+  background: #c7c2be;
+  margin: 2px 0;
+  min-height: 1px;
+  min-width: 0;
 }

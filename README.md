@@ -29,9 +29,14 @@ Originalgröße, Statuszeile mit Bedienhinweis.
 | Speichern … / In Zwischenablage kopieren | Strg+S / Strg+C |
 | Neue Aufnahme / Schließen | Strg+N / Strg+W |
 | laufende Zeichnung abbrechen | Esc |
+| Farbpalette öffnen (Pfeiltasten, Eingabe-/Leertaste, Esc) | F |
 
-Farben Rot (Standard), Gelb, Grün, Blau, Schwarz; Stärken Dünn, Mittel
-(Standard), Dick. „Alle Markierungen entfernen“ fragt nach und ist rückgängig
+Farben: eine Farbschaltfläche in der Werkzeugleiste zeigt die aktuelle Farbe
+und klappt die Palette auf – acht Grundfarben in zwei Reihen (Rot =
+Standard, Orange, Gelb, Grün, Blau, Violett, Schwarz, Weiß) und
+„Benutzerdefinierte Farbe …“ (kleines Fenster mit dem GTK-Farbwähler,
+Eingabe „#RRGGBB“). Die Farbe gilt für neue Markierungen aller Werkzeuge;
+vorhandene behalten ihre Farbe. Stärken Dünn, Mittel (Standard), Dick. „Alle Markierungen entfernen“ fragt nach und ist rückgängig
 machbar. Ungespeicherte Markierungen lösen beim Schließen eine Abfrage aus.
 
 Die Aufnahme bleibt unverändert; Markierungen sind eigene Objekte in

@@ -261,7 +261,7 @@ pub mod tests {
     fn mark(shape: Shape) -> Mark {
         Mark {
             shape,
-            color: Color::Red,
+            color: Color::RED,
             width: Width::Medium,
         }
     }
@@ -306,7 +306,7 @@ pub mod tests {
             )),
             Mark {
                 shape: Shape::Pen(vec![Point::new(20.0, 150.0), Point::new(120.0, 150.0)]),
-                color: Color::Blue,
+                color: Color::BLUE,
                 width: Width::Thick,
             },
             Mark {
@@ -314,7 +314,7 @@ pub mod tests {
                     Point::new(200.0, 20.0),
                     "Hier stimmt etwas nicht – Größe".into(),
                 ),
-                color: Color::Black,
+                color: Color::BLACK,
                 width: Width::Medium,
             },
         ];

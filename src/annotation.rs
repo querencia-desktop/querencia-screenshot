@@ -80,65 +80,163 @@ impl Tool {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Color {
-    Red,
-    Yellow,
-    Green,
-    Blue,
-    Black,
+/// Markierungsfarbe: eine der acht Grundfarben der Palette oder eine
+/// benutzerdefinierte Farbe aus dem Farbdialog (RGB, 0…1, deckend).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Color {
+    r: f64,
+    g: f64,
+    b: f64,
+}
+
+/// Eine Grundfarbe der Palette: Farbe, Kennung (Aktionsziel), Name.
+pub struct Named {
+    pub color: Color,
+    pub id: &'static str,
+    pub label: &'static str,
 }
 
 impl Color {
-    pub const ALL: [Color; 5] = [
-        Color::Red,
-        Color::Yellow,
-        Color::Green,
-        Color::Blue,
-        Color::Black,
+    // Kräftige, gut sichtbare Töne; Rot exakt #e60000 wie bisher.
+    pub const RED: Color = Color::new(0.90, 0.0, 0.0);
+    pub const ORANGE: Color = Color::new(1.0, 0.50, 0.0);
+    pub const YELLOW: Color = Color::new(1.0, 0.85, 0.0);
+    pub const GREEN: Color = Color::new(0.0, 0.65, 0.0);
+    pub const BLUE: Color = Color::new(0.0, 0.35, 0.90);
+    pub const VIOLET: Color = Color::new(0.55, 0.10, 0.70);
+    pub const BLACK: Color = Color::new(0.0, 0.0, 0.0);
+    pub const WHITE: Color = Color::new(1.0, 1.0, 1.0);
+
+    /// Die acht Grundfarben in Palettenreihenfolge (zwei Reihen zu vier).
+    pub const PALETTE: [Named; 8] = [
+        Named {
+            color: Color::RED,
+            id: "rot",
+            label: "Rot",
+        },
+        Named {
+            color: Color::ORANGE,
+            id: "orange",
+            label: "Orange",
+        },
+        Named {
+            color: Color::YELLOW,
+            id: "gelb",
+            label: "Gelb",
+        },
+        Named {
+            color: Color::GREEN,
+            id: "gruen",
+            label: "Grün",
+        },
+        Named {
+            color: Color::BLUE,
+            id: "blau",
+            label: "Blau",
+        },
+        Named {
+            color: Color::VIOLET,
+            id: "violett",
+            label: "Violett",
+        },
+        Named {
+            color: Color::BLACK,
+            id: "schwarz",
+            label: "Schwarz",
+        },
+        Named {
+            color: Color::WHITE,
+            id: "weiss",
+            label: "Weiß",
+        },
     ];
 
-    pub fn id(self) -> &'static str {
-        match self {
-            Self::Red => "rot",
-            Self::Yellow => "gelb",
-            Self::Green => "gruen",
-            Self::Blue => "blau",
-            Self::Black => "schwarz",
-        }
+    pub const fn new(r: f64, g: f64, b: f64) -> Self {
+        Self { r, g, b }
+    }
+
+    /// Benutzerdefinierte Farbe aus 8-Bit-Werten; trifft sie eine
+    /// Grundfarbe, ist es genau diese.
+    pub fn from_rgb8(r: u8, g: u8, b: u8) -> Self {
+        let color = Self::new(
+            f64::from(r) / 255.0,
+            f64::from(g) / 255.0,
+            f64::from(b) / 255.0,
+        );
+        Self::PALETTE
+            .iter()
+            .find(|named| named.color.rgb8() == (r, g, b))
+            .map_or(color, |named| named.color)
+    }
+
+    /// Aus Farbdialog-Werten (0…1, auch außerhalb), auf 8 Bit gerundet.
+    pub fn from_unit(r: f32, g: f32, b: f32) -> Self {
+        let byte = |c: f32| (c.clamp(0.0, 1.0) * 255.0).round() as u8;
+        Self::from_rgb8(byte(r), byte(g), byte(b))
+    }
+
+    pub fn rgb8(self) -> (u8, u8, u8) {
+        let byte = |c: f64| (c.clamp(0.0, 1.0) * 255.0).round() as u8;
+        (byte(self.r), byte(self.g), byte(self.b))
+    }
+
+    /// Die Grundfarbe, falls es eine ist.
+    pub fn named(self) -> Option<&'static Named> {
+        Self::PALETTE.iter().find(|named| named.color == self)
+    }
+
+    /// „#RRGGBB“
+    pub fn hex(self) -> String {
+        let (r, g, b) = self.rgb8();
+        format!("#{r:02X}{g:02X}{b:02X}")
+    }
+
+    /// Kennung für die Aktion `win.color`: Name der Grundfarbe oder „#RRGGBB“.
+    pub fn id(self) -> String {
+        self.named()
+            .map_or_else(|| self.hex(), |named| named.id.to_owned())
     }
 
     pub fn from_id(id: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|color| color.id() == id)
-    }
-
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Red => "Rot",
-            Self::Yellow => "Gelb",
-            Self::Green => "Grün",
-            Self::Blue => "Blau",
-            Self::Black => "Schwarz",
+        if let Some(named) = Self::PALETTE.iter().find(|named| named.id == id) {
+            return Some(named.color);
         }
+        let hex = id.strip_prefix('#')?;
+        if hex.len() != 6 || !hex.bytes().all(|c| c.is_ascii_hexdigit()) {
+            return None;
+        }
+        let part = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).ok();
+        Some(Self::from_rgb8(part(0)?, part(2)?, part(4)?))
     }
 
-    /// RGB, 0…1. Kräftige, gut sichtbare Töne (Rot exakt #e60000).
+    pub fn label(self) -> String {
+        self.named().map_or_else(
+            || format!("eigene Farbe {}", self.hex()),
+            |named| named.label.to_owned(),
+        )
+    }
+
+    pub fn is_custom(self) -> bool {
+        self.named().is_none()
+    }
+
+    /// RGB, 0…1.
     pub fn rgb(self) -> (f64, f64, f64) {
-        match self {
-            Self::Red => (0.90, 0.0, 0.0),
-            Self::Yellow => (1.0, 0.85, 0.0),
-            Self::Green => (0.0, 0.65, 0.0),
-            Self::Blue => (0.0, 0.35, 0.90),
-            Self::Black => (0.0, 0.0, 0.0),
-        }
+        (self.r, self.g, self.b)
+    }
+
+    /// Helle Farbe (Gelb, Weiß, helle eigene Farben)?
+    pub fn is_light(self) -> bool {
+        0.2126 * self.r + 0.7152 * self.g + 0.0722 * self.b > 0.6
     }
 
     /// Hintergrundfarbe für den Textrand, damit Text auf jedem Bild lesbar
-    /// bleibt: hell um dunkle Farben, dunkel um Gelb.
+    /// bleibt: hell um dunkle Farben, dunkel um helle (Gelb, Weiß).
     pub fn halo(self) -> (f64, f64, f64) {
-        match self {
-            Self::Yellow => (0.0, 0.0, 0.0),
-            _ => (1.0, 1.0, 1.0),
+        if self.is_light() {
+            (0.0, 0.0, 0.0)
+        } else {
+            (1.0, 1.0, 1.0)
         }
     }
 }
@@ -387,7 +485,7 @@ mod tests {
     fn ellipse(x: f64) -> Mark {
         Mark {
             shape: Shape::Ellipse(Point::new(x, 10.0), Point::new(x + 50.0, 40.0)),
-            color: Color::Red,
+            color: Color::RED,
             width: Width::Medium,
         }
     }
@@ -397,16 +495,58 @@ mod tests {
         for tool in Tool::ALL {
             assert_eq!(Tool::from_id(tool.id()), Some(tool));
         }
-        for color in Color::ALL {
-            assert_eq!(Color::from_id(color.id()), Some(color));
+        for named in Color::PALETTE {
+            assert_eq!(Color::from_id(&named.color.id()), Some(named.color));
+            assert_eq!(named.color.id(), named.id);
         }
         for width in Width::ALL {
             assert_eq!(Width::from_id(width.id()), Some(width));
         }
-        assert_eq!(Color::Red.rgb(), (0.90, 0.0, 0.0));
+        assert_eq!(Color::RED.rgb(), (0.90, 0.0, 0.0));
         assert!(Width::Thin.pixels() < Width::Medium.pixels());
         assert!(Width::Medium.pixels() < Width::Thick.pixels());
         assert_eq!(Tool::from_id("unbekannt"), None);
+    }
+
+    #[test]
+    fn palette_has_eight_distinct_colors_and_custom_colors_round_trip() {
+        assert_eq!(Color::PALETTE.len(), 8);
+        for (i, a) in Color::PALETTE.iter().enumerate() {
+            assert!(!a.color.is_custom());
+            for b in &Color::PALETTE[i + 1..] {
+                assert_ne!(a.color.rgb8(), b.color.rgb8());
+                assert_ne!(a.id, b.id);
+            }
+        }
+        // Rot bleibt die Standardfarbe mit genau dem bisherigen Ton.
+        assert_eq!(Color::RED.hex(), "#E60000");
+        assert_eq!(Color::from_id("rot"), Some(Color::RED));
+        // Eigene Farbe: Kennung „#RRGGBB“ hin und zurück.
+        let custom = Color::from_rgb8(0x33, 0x66, 0xcc);
+        assert!(custom.is_custom());
+        assert_eq!(custom.id(), "#3366CC");
+        assert_eq!(Color::from_id("#3366cc"), Some(custom));
+        assert_eq!(custom.label(), "eigene Farbe #3366CC");
+        // Eine eigene Farbe, die genau einer Grundfarbe entspricht, ist diese.
+        assert_eq!(Color::from_id("#E60000"), Some(Color::RED));
+        assert_eq!(Color::from_unit(230.0 / 255.0, 0.0, 0.0), Color::RED);
+        assert_eq!(Color::from_unit(2.0, -1.0, 0.5).rgb8(), (255, 0, 128));
+        for bad in ["", "#", "#12345", "#1234567", "#GG0000", "3366cc", "lila"] {
+            assert_eq!(Color::from_id(bad), None, "{bad}");
+        }
+        // Textrand: dunkel um helle Farben, hell um dunkle.
+        assert_eq!(Color::YELLOW.halo(), (0.0, 0.0, 0.0));
+        assert_eq!(Color::WHITE.halo(), (0.0, 0.0, 0.0));
+        for dark in [
+            Color::RED,
+            Color::GREEN,
+            Color::BLUE,
+            Color::BLACK,
+            Color::VIOLET,
+            Color::ORANGE,
+        ] {
+            assert_eq!(dark.halo(), (1.0, 1.0, 1.0));
+        }
     }
 
     #[test]
@@ -552,7 +692,7 @@ mod tests {
             assert!(
                 !marks.add(Mark {
                     shape: shape.clone(),
-                    color: Color::Red,
+                    color: Color::RED,
                     width: Width::Thin
                 }),
                 "{shape:?}"
@@ -561,7 +701,7 @@ mod tests {
         assert!(marks.items().is_empty() && !marks.can_undo());
         assert!(marks.add(Mark {
             shape: Shape::Pen(vec![dot]),
-            color: Color::Red,
+            color: Color::RED,
             width: Width::Thin
         }));
     }
