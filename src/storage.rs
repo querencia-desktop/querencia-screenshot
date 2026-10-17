@@ -177,43 +177,6 @@ pub fn save_exact(directory: &Path, name: &str, png: &Png) -> Result<PathBuf, Sa
     Ok(path)
 }
 
-/// Legt den Ordner an (0700), wählt einen freien Namen und schreibt die
-/// Datei mit `create_new` (0600): weder eine vorhandene Datei noch ein
-/// Symlink wird überschrieben.
-pub fn save(directory: &Path, name: &str, png: &Png) -> Result<PathBuf, SaveError> {
-    use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
-    if !directory.exists() {
-        fs::DirBuilder::new()
-            .recursive(true)
-            .mode(0o700)
-            .create(directory)
-            .map_err(|error| SaveError::CreateDirectory(directory.to_path_buf(), error))?;
-    }
-    if !directory.is_dir() {
-        return Err(SaveError::NotADirectory(directory.to_path_buf()));
-    }
-    for _ in 0..3 {
-        let path = unique_path(directory, name)?;
-        match OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .mode(0o600)
-            .open(&path)
-        {
-            Ok(mut file) => {
-                file.write_all(png.bytes())
-                    .and_then(|()| file.sync_all())
-                    .map_err(|error| SaveError::Write(path.clone(), error))?;
-                return Ok(path);
-            }
-            // Zwischen Namenswahl und Anlegen hat jemand den Namen belegt.
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(SaveError::Write(path, error)),
-        }
-    }
-    Err(SaveError::NoFreeName(directory.to_path_buf()))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -276,32 +239,6 @@ mod tests {
             dir.join("Screenshot-x-3.png")
         );
         let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn save_creates_the_folder_privately_and_never_overwrites() {
-        use std::os::unix::fs::PermissionsExt;
-        let dir = scratch("save").join("Bilder").join("Screenshots");
-        let png = Png::new(sample(2, 2)).expect("png");
-        let first = save(&dir, "Screenshot-a.png", &png).expect("first");
-        assert_eq!(first, dir.join("Screenshot-a.png"));
-        assert_eq!(fs::read(&first).expect("read"), sample(2, 2));
-        assert_eq!(
-            fs::metadata(&first).expect("meta").permissions().mode() & 0o777,
-            0o600
-        );
-        assert_eq!(
-            fs::metadata(&dir).expect("dir").permissions().mode() & 0o777,
-            0o700
-        );
-        let second = save(&dir, "Screenshot-a.png", &png).expect("second");
-        assert_eq!(second, dir.join("Screenshot-a-2.png"));
-        assert_eq!(
-            fs::read(&first).expect("read"),
-            sample(2, 2),
-            "erste Datei unverändert"
-        );
-        let _ = fs::remove_dir_all(dir.parent().and_then(Path::parent).expect("scratch root"));
     }
 
     #[test]
@@ -373,24 +310,6 @@ mod tests {
         fs::set_permissions(&locked, fs::Permissions::from_mode(0o700)).expect("chmod");
         let error = save_exact(&locked.join("x").join("y"), "a", &png);
         assert!(error.is_ok(), "nach Freigabe anlegbar");
-        let _ = fs::remove_dir_all(&root);
-    }
-
-    #[test]
-    fn save_refuses_a_file_in_place_of_the_folder_and_unwritable_targets() {
-        let root = scratch("refuse");
-        fs::create_dir_all(&root).expect("scratch");
-        let not_a_dir = root.join("file");
-        fs::write(&not_a_dir, b"x").expect("file");
-        let png = Png::new(sample(1, 1)).expect("png");
-        assert!(matches!(
-            save(&not_a_dir, "Screenshot.png", &png),
-            Err(SaveError::NotADirectory(_))
-        ));
-        assert!(matches!(
-            save(&not_a_dir.join("below"), "Screenshot.png", &png),
-            Err(SaveError::CreateDirectory(..))
-        ));
         let _ = fs::remove_dir_all(&root);
     }
 }

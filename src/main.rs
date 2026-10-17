@@ -3,15 +3,18 @@
 //! Querencia Screenshot: ein kleines klassisches Aufnahmewerkzeug für
 //! Wayland/labwc auf Basis von grim, slurp und wl-copy.
 //!
-//! Ohne Option öffnet sich das Auswahlfenster (eine Instanz, wie bisher).
-//! `--screen`, `--window` und `--area` nehmen sofort auf und zeigen danach
-//! „Bildschirmfoto speichern“ (GNOME 2: Druck, Alt+Druck); siehe `cli`.
+//! Ohne Option öffnet sich das Auswahlfenster (eine Instanz). `--screen`,
+//! `--window` und `--area` nehmen sofort auf; `--open` öffnet ein PNG.
+//! Danach bearbeitet der Editor das Bild (QS-0d); siehe `cli`.
 
+mod annotation;
 mod capture;
 mod cli;
 mod clipboard;
+mod editor;
 mod geometry;
 mod instant;
+mod render;
 mod runner;
 mod screenshot;
 mod storage;
@@ -52,13 +55,15 @@ fn main() -> glib::ExitCode {
             application
         }
         cli::Command::Capture(target) => {
-            // Jeder Tastendruck ist eine eigene Aufnahme mit eigenem Dialog,
-            // wie bei GNOME 2; eine offene Auswahl-Instanz bleibt unberührt.
-            let application = gtk::Application::builder()
-                .application_id(APPLICATION_ID)
-                .flags(gio::ApplicationFlags::NON_UNIQUE)
-                .build();
+            // Jeder Tastendruck ist eine eigene Aufnahme mit eigenem Editor;
+            // ein offenes Auswahlfenster bleibt unberührt.
+            let application = unique_less();
             application.connect_activate(move |application| instant::start(application, target));
+            application
+        }
+        cli::Command::Open(path) => {
+            let application = unique_less();
+            application.connect_activate(move |application| open_file(application, &path));
             application
         }
     };
@@ -66,4 +71,39 @@ fn main() -> glib::ExitCode {
     // Die Optionen sind schon ausgewertet; GApplication bekommt nur den
     // Programmnamen.
     application.run_with_args(&[program])
+}
+
+fn unique_less() -> gtk::Application {
+    gtk::Application::builder()
+        .application_id(APPLICATION_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
+        .build()
+}
+
+/// `--open`: ein vorhandenes PNG im Editor öffnen. Speichern schlägt einen
+/// neuen Namen daneben vor („…-markiert.png“), nie die Datei selbst.
+fn open_file(application: &gtk::Application, path: &std::path::Path) {
+    let loaded = std::fs::read(path)
+        .map_err(|error| format!("„{}“ kann nicht gelesen werden: {error}", path.display()))
+        .and_then(|bytes| {
+            screenshot::Png::new(bytes).map_err(|error| format!("„{}“: {error}", path.display()))
+        });
+    match loaded {
+        Ok(png) => editor::open(
+            application,
+            editor::Source {
+                png,
+                description: format!(
+                    "Datei „{}“",
+                    path.file_name().unwrap_or_default().to_string_lossy()
+                ),
+                suggested_name: Some(editor::marked_name(path)),
+                suggested_folder: path
+                    .parent()
+                    .filter(|folder| folder.is_dir())
+                    .map(std::path::Path::to_path_buf),
+            },
+        ),
+        Err(message) => instant::show_error(application, &message),
+    }
 }

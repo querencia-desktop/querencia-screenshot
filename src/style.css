@@ -102,3 +102,114 @@ window.qs-window.solid-csd decoration {
   border: 1px solid #888888;
   border-radius: 0;
 }
+
+/* ---- QS-0d: Auswahlfenster ------------------------------------------ */
+
+window.qs-window .qs-heading {
+  font-weight: bold;
+}
+
+window.qs-window button.qs-choice {
+  padding: 6px 10px;
+}
+
+window.qs-window button.qs-choice:focus-visible {
+  outline: 1px dotted #303030;
+  outline-offset: -4px;
+}
+
+window.qs-window .qs-choice-title {
+  font-weight: bold;
+}
+
+/* ---- QS-0d: Editor ---------------------------------------------------- */
+
+window.qs-editor menubar.qs-menubar {
+  background: #edebe9;
+  border-bottom: 1px solid #c7c2be;
+  padding: 0 2px;
+}
+
+/* Menüleiste wie GNOME 2: geöffneter oder gewählter Eintrag orange
+   hinterlegt, keine Unterstreichung. */
+window.qs-editor menubar.qs-menubar > item {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  color: #303030;
+  padding: 3px 8px;
+}
+
+window.qs-editor menubar.qs-menubar > item:hover {
+  background: #dcd8d4;
+  box-shadow: none;
+  color: #303030;
+}
+
+window.qs-editor menubar.qs-menubar > item:selected {
+  background: #f07746;
+  box-shadow: none;
+  color: #ffffff;
+}
+
+window.qs-editor .qs-toolbar {
+  background: #edebe9;
+  border-bottom: 1px solid #b0b0b0;
+  padding: 3px 4px;
+}
+
+window.qs-editor .qs-toolbar button,
+window.qs-editor .qs-toolbar togglebutton {
+  background: #e8e8e8;
+  border: 1px solid #b0b0b0;
+  border-radius: 2px;
+  box-shadow: none;
+  color: #303030;
+  min-height: 26px;
+  min-width: 26px;
+  padding: 2px 5px;
+  transition: none;
+}
+
+window.qs-editor .qs-toolbar button:hover,
+window.qs-editor .qs-toolbar togglebutton:hover {
+  background: #f4f4f4;
+}
+
+window.qs-editor .qs-toolbar button:disabled {
+  opacity: 0.45;
+}
+
+/* Aktives Werkzeug, aktive Farbe und Stärke: eingedrückt und mit dem
+   Querencia-Orange (#f07746, wie die Menühervorhebung) umrandet. */
+window.qs-editor .qs-toolbar togglebutton:checked {
+  background: #d6d2cd;
+  border: 2px solid #f07746;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  padding: 1px 4px;
+}
+
+window.qs-editor .qs-toolbar separator {
+  background: #b0b0b0;
+  min-width: 1px;
+}
+
+window.qs-editor .qs-canvas {
+  background: #8c8c8c;
+}
+
+window.qs-editor .qs-statusbar {
+  background: #edebe9;
+  border-top: 1px solid #c7c2be;
+  color: #404040;
+  font-size: 0.92em;
+  padding: 2px 8px;
+}
+
+/* Texteingabe über dem Bild */
+window.qs-editor .qs-textbox {
+  background: #f5f4f2;
+  border: 1px solid #888888;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+}

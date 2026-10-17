@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-//! Sofortaufnahme wie GNOME 2: Druck nimmt den Bildschirm auf, Alt+Druck das
-//! aktive Fenster, ohne vorher nach dem Modus zu fragen. Danach erscheint
-//! „Bildschirmfoto speichern“ mit Vorschau, Name, Ordner, Kopieren und
-//! Abbrechen. Vor der Aufnahme ist kein eigenes Fenster sichtbar, also steht
-//! nichts von Querencia Screenshot im Bild.
+//! Sofortaufnahme (`--screen`, `--window`, `--area`): ohne vorherige
+//! Moduswahl aufnehmen und das Ergebnis im Editor öffnen (QS-0d; bis QS-1
+//! direkt im Speicherdialog). Vor der Aufnahme ist kein eigenes Fenster
+//! sichtbar, also steht nichts von Querencia Screenshot im Bild.
+//!
+//! Dazu der Dialog „Bildschirmfoto speichern“ (Vorschau, Name, Ordner,
+//! Kopieren, Abbrechen), den der Editor zum Speichern des fertigen Bildes
+//! öffnet.
 
 use std::{
     cell::RefCell,
@@ -17,7 +20,7 @@ use gtk::{gdk, gio, glib, prelude::*};
 use crate::{
     capture::{self, CaptureError, Scope},
     cli::Target,
-    clipboard,
+    clipboard, editor,
     runner::{self, CommandRunner},
     screenshot::Png,
     storage,
@@ -96,7 +99,15 @@ pub fn start(application: &gtk::Application, target: Target) {
                     shot.description,
                     shot.png.size_bytes()
                 );
-                show_save_dialog(&application, shot);
+                editor::open(
+                    &application,
+                    editor::Source {
+                        png: shot.png,
+                        description: shot.description,
+                        suggested_name: None,
+                        suggested_folder: None,
+                    },
+                );
             }
             Ok(Ok(None)) => println!("querencia-screenshot: abgebrochen – nichts gespeichert"),
             Ok(Err(error)) => show_error(&application, &error.to_string()),
@@ -106,14 +117,22 @@ pub fn start(application: &gtk::Application, target: Target) {
     });
 }
 
-fn titled_window(application: &gtk::Application, title: &str) -> gtk::ApplicationWindow {
+fn titled_window(
+    application: &gtk::Application,
+    title: &str,
+    parent: Option<&gtk::Window>,
+) -> gtk::ApplicationWindow {
     let window = gtk::ApplicationWindow::builder()
         .application(application)
         .title(title)
         .resizable(false)
         .build();
+    if let Some(parent) = parent {
+        window.set_transient_for(Some(parent));
+        window.set_modal(true);
+    }
     window.add_css_class("qs-window");
-    window.set_icon_name(Some("applets-screenshooter"));
+    // Kein set_icon_name, siehe „Fenstersymbol“ in ui.rs.
     let titlebar = gtk::HeaderBar::new();
     titlebar.set_show_title_buttons(true);
     titlebar.set_decoration_layout(Some(":close"));
@@ -122,9 +141,9 @@ fn titled_window(application: &gtk::Application, title: &str) -> gtk::Applicatio
     window
 }
 
-fn show_error(application: &gtk::Application, message: &str) {
+pub fn show_error(application: &gtk::Application, message: &str) {
     eprintln!("querencia-screenshot: Fehler: {message}");
-    let window = titled_window(application, "Bildschirmfoto fehlgeschlagen");
+    let window = titled_window(application, "Bildschirmfoto fehlgeschlagen", None);
     let root = gtk::Box::new(gtk::Orientation::Vertical, 10);
     root.set_margin_top(12);
     root.set_margin_bottom(12);
@@ -216,7 +235,25 @@ fn suggested_name(directory: &Path) -> String {
     name
 }
 
+/// Rückmeldung nach erfolgreichem Speichern, mit dem Pfad.
+pub type OnSaved = Box<dyn Fn(&Path)>;
+
+/// Was „Bildschirmfoto speichern“ speichern soll.
+pub struct SaveRequest {
+    pub png: Png,
+    pub description: String,
+    /// Fenster, über dem der Dialog modal erscheint.
+    pub parent: Option<gtk::Window>,
+    pub suggested_name: Option<String>,
+    pub suggested_folder: Option<PathBuf>,
+    /// Nach erfolgreichem Speichern, mit dem Pfad.
+    pub on_saved: Option<OnSaved>,
+    /// Beim Schließen des Dialogs (gespeichert oder nicht).
+    pub on_closed: Option<Box<dyn Fn()>>,
+}
+
 struct Dialog {
+    on_saved: Option<OnSaved>,
     window: gtk::ApplicationWindow,
     name: gtk::Entry,
     folder_label: gtk::Label,
@@ -228,8 +265,18 @@ struct Dialog {
     busy: RefCell<bool>,
 }
 
-fn show_save_dialog(application: &gtk::Application, shot: Shot) {
-    let window = titled_window(application, "Bildschirmfoto speichern");
+pub fn show_save_dialog(application: &gtk::Application, request: SaveRequest) {
+    let SaveRequest {
+        png,
+        description,
+        parent,
+        suggested_name: wanted_name,
+        suggested_folder,
+        on_saved,
+        on_closed,
+    } = request;
+    let shot = Shot { png, description };
+    let window = titled_window(application, "Bildschirmfoto speichern", parent.as_ref());
     let root = gtk::Box::new(gtk::Orientation::Vertical, 8);
     root.set_margin_top(10);
     root.set_margin_bottom(10);
@@ -269,9 +316,9 @@ fn show_save_dialog(application: &gtk::Application, shot: Shot) {
     grid.set_column_spacing(8);
     let name_title = gtk::Label::with_mnemonic("_Name:");
     name_title.set_xalign(1.0);
-    let directory = storage::default_directory();
+    let directory = suggested_folder.unwrap_or_else(storage::default_directory);
     let name = gtk::Entry::new();
-    name.set_text(&suggested_name(&directory));
+    name.set_text(&wanted_name.unwrap_or_else(|| suggested_name(&directory)));
     name.set_hexpand(true);
     name.set_width_chars(36);
     name_title.set_mnemonic_widget(Some(&name));
@@ -325,6 +372,7 @@ fn show_save_dialog(application: &gtk::Application, shot: Shot) {
     window.set_default_widget(Some(&save));
 
     let dialog = Rc::new(Dialog {
+        on_saved,
         window: window.clone(),
         name: name.clone(),
         folder_label,
@@ -359,8 +407,11 @@ fn show_save_dialog(application: &gtk::Application, shot: Shot) {
         let window = window.clone();
         cancel.connect_clicked(move |_| window.close());
     }
-    window.connect_close_request(|_| {
+    window.connect_close_request(move |_| {
         println!("querencia-screenshot: Dialog geschlossen");
+        if let Some(on_closed) = &on_closed {
+            on_closed();
+        }
         glib::Propagation::Proceed
     });
     close_on_escape(&window);
@@ -394,6 +445,9 @@ fn save_now(dialog: &Rc<Dialog>) {
     match storage::save_exact(&folder, &dialog.name.text(), &dialog.png) {
         Ok(path) => {
             println!("querencia-screenshot: Gespeichert: {}", path.display());
+            if let Some(on_saved) = &dialog.on_saved {
+                on_saved(&path);
+            }
             dialog.window.close();
         }
         Err(error) => {
