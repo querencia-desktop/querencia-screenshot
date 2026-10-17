@@ -24,6 +24,13 @@ const COMPOSITOR_GRACE: Duration = Duration::from_millis(150);
 const PREVIEW_WIDTH: i32 = 480;
 const PREVIEW_HEIGHT: i32 = 270;
 
+// Fensterdekoration: Kein Fenster setzt eine eigene Titelleiste
+// (`set_titlebar`/HeaderBar). GTK 4 fordert dann über xdg-decoration die
+// Dekoration des Compositors an, und labwc zeichnet Titel, Minimieren,
+// Maximieren und Schließen genau wie bei Querencia Terminal und Files – eine
+// Leiste, keine nachgebauten Knöpfe (QS-0d-Deko; bis dahin GTK-CSD mit
+// eigener HeaderBar).
+//
 // Fenstersymbol: Fenster bekommen **kein** eigenes Symbol (`set_icon_name`). GTK 4.22
 // schickt es über `xdg_toplevel_icon_v1` an labwc 0.9.8; schloss sich ein
 // Fenster mit Symbol (Speicherdialog, Auswahlfenster), während ein anderes
@@ -137,11 +144,7 @@ pub fn present(application: &gtk::Application) {
     window.add_css_class("qs-window");
     window.add_css_class(CHOOSER_CLASS);
     // Kein set_icon_name, siehe „Fenstersymbol“ in ui.rs.
-    let titlebar = gtk::HeaderBar::new();
-    titlebar.set_show_title_buttons(true);
-    titlebar.set_decoration_layout(Some(":minimize,close"));
-    titlebar.add_css_class("qs-titlebar");
-    window.set_titlebar(Some(&titlebar));
+    // Keine eigene Titelleiste, siehe „Fensterdekoration“ in ui.rs.
 
     let root = gtk::Box::new(gtk::Orientation::Vertical, 8);
     root.set_margin_top(10);

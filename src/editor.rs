@@ -221,11 +221,7 @@ pub fn open(application: &gtk::Application, source: Source) {
     window.add_css_class("qs-window");
     window.add_css_class("qs-editor");
     // Kein set_icon_name, siehe „Fenstersymbol“ in ui.rs.
-    let titlebar = gtk::HeaderBar::new();
-    titlebar.set_show_title_buttons(true);
-    titlebar.set_decoration_layout(Some(":minimize,maximize,close"));
-    titlebar.add_css_class("qs-titlebar");
-    window.set_titlebar(Some(&titlebar));
+    // Keine eigene Titelleiste, siehe „Fensterdekoration“ in ui.rs.
 
     let area = gtk::DrawingArea::new();
     area.set_hexpand(true);
@@ -1093,32 +1089,36 @@ fn connect_close(editor: &Rc<Editor>) {
             println!("querencia-screenshot: Editor geschlossen");
             return glib::Propagation::Proceed;
         }
-        let dialog = gtk::AlertDialog::builder()
-            .modal(true)
-            .message("Änderungen nicht gespeichert")
-            .detail("Die Markierungen wurden seit dem letzten Speichern geändert oder noch nie gespeichert. Beim Schließen gehen diese Änderungen verloren.")
-            .buttons(["_Abbrechen", "_Ohne Speichern schließen", "_Speichern …"])
-            .cancel_button(0)
-            .default_button(2)
-            .build();
         let weak = Rc::downgrade(&editor);
-        dialog.choose(Some(window), gio::Cancellable::NONE, move |answer| {
-            let Some(editor) = upgrade(&weak) else {
-                return;
-            };
-            match answer {
-                Ok(1) => {
-                    println!("querencia-screenshot: ohne Speichern geschlossen");
-                    editor.force_close.set(true);
-                    editor.window.close();
+        instant::ask(
+            window,
+            instant::Question {
+                title: "Querencia Screenshot",
+                message: "Änderungen nicht gespeichert",
+                detail: "Die Markierungen wurden seit dem letzten Speichern geändert oder noch nie gespeichert. Beim Schließen gehen diese Änderungen verloren.",
+                icon: &["dialog-warning"],
+                buttons: &["_Abbrechen", "_Ohne Speichern schließen", "_Speichern …"],
+                cancel: 0,
+                default: 2,
+            },
+            move |answer| {
+                let Some(editor) = upgrade(&weak) else {
+                    return;
+                };
+                match answer {
+                    1 => {
+                        println!("querencia-screenshot: ohne Speichern geschlossen");
+                        editor.force_close.set(true);
+                        editor.window.close();
+                    }
+                    2 => {
+                        editor.close_after_save.set(true);
+                        save(&editor);
+                    }
+                    _ => editor.say("Schließen abgebrochen"),
                 }
-                Ok(2) => {
-                    editor.close_after_save.set(true);
-                    save(&editor);
-                }
-                _ => editor.say("Schließen abgebrochen"),
-            }
-        });
+            },
+        );
         glib::Propagation::Stop
     });
 }
@@ -1127,23 +1127,23 @@ fn confirm_clear(editor: &Rc<Editor>) {
     if editor.marks.borrow().items().is_empty() {
         return;
     }
-    let dialog = gtk::AlertDialog::builder()
-        .modal(true)
-        .message("Alle Markierungen entfernen?")
-        .detail("Das Bildschirmfoto selbst bleibt erhalten. Mit Strg+Z lassen sich die Markierungen zurückholen.")
-        .buttons(["_Abbrechen", "_Entfernen"])
-        .cancel_button(0)
-        .default_button(1)
-        .build();
     let weak = Rc::downgrade(editor);
-    dialog.choose(
-        Some(&editor.window),
-        gio::Cancellable::NONE,
+    instant::ask(
+        &editor.window,
+        instant::Question {
+            title: "Querencia Screenshot",
+            message: "Alle Markierungen entfernen?",
+            detail: "Das Bildschirmfoto selbst bleibt erhalten. Mit Strg+Z lassen sich die Markierungen zurückholen.",
+            icon: &["dialog-question", "dialog-warning"],
+            buttons: &["_Abbrechen", "_Entfernen"],
+            cancel: 0,
+            default: 1,
+        },
         move |answer| {
             let Some(editor) = upgrade(&weak) else {
                 return;
             };
-            if answer == Ok(1) && editor.marks.borrow_mut().clear() {
+            if answer == 1 && editor.marks.borrow_mut().clear() {
                 editor.say("Alle Markierungen entfernt");
             }
             editor.refresh();

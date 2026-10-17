@@ -133,12 +133,108 @@ fn titled_window(
     }
     window.add_css_class("qs-window");
     // Kein set_icon_name, siehe „Fenstersymbol“ in ui.rs.
-    let titlebar = gtk::HeaderBar::new();
-    titlebar.set_show_title_buttons(true);
-    titlebar.set_decoration_layout(Some(":close"));
-    titlebar.add_css_class("qs-titlebar");
-    window.set_titlebar(Some(&titlebar));
+    // Keine eigene Titelleiste, siehe „Fensterdekoration“ in ui.rs.
     window
+}
+
+/// Eine Rückfrage als klassisches modales Fenster über `parent` – mit der
+/// labwc-Dekoration wie alle anderen Fenster (statt GtkAlertDialog, den GTK
+/// ohne Titelleiste und abgerundet zeichnet). `buttons` mit Zugriffstasten
+/// („_Abbrechen“); Esc, Schließen-Knopf und `cancel` antworten `cancel`, die
+/// Eingabetaste löst `default` aus. `on_answer` wird genau einmal gerufen.
+pub struct Question<'a> {
+    pub title: &'a str,
+    pub message: &'a str,
+    pub detail: &'a str,
+    pub icon: &'a [&'a str],
+    pub buttons: &'a [&'a str],
+    pub cancel: usize,
+    pub default: usize,
+}
+
+pub fn ask(
+    parent: &gtk::ApplicationWindow,
+    question: Question,
+    on_answer: impl Fn(usize) + 'static,
+) {
+    let Some(application) = parent.application() else {
+        on_answer(question.cancel);
+        return;
+    };
+    let parent_window: gtk::Window = parent.clone().upcast();
+    let window = titled_window(&application, question.title, Some(&parent_window));
+    let root = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    root.set_margin_top(12);
+    root.set_margin_bottom(12);
+    root.set_margin_start(12);
+    root.set_margin_end(12);
+    let body = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    if let Some(image) = ui::theme_icon(question.icon) {
+        image.set_pixel_size(48);
+        image.set_valign(gtk::Align::Start);
+        body.append(&image);
+    }
+    let texts = gtk::Box::new(gtk::Orientation::Vertical, 6);
+    let message = gtk::Label::new(Some(question.message));
+    message.set_xalign(0.0);
+    message.add_css_class("qs-heading");
+    let detail = gtk::Label::new(Some(question.detail));
+    detail.set_xalign(0.0);
+    detail.set_wrap(true);
+    detail.set_max_width_chars(52);
+    texts.append(&message);
+    texts.append(&detail);
+    body.append(&texts);
+    root.append(&body);
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    row.set_halign(gtk::Align::End);
+    root.append(&row);
+    window.set_child(Some(&root));
+
+    let answered = Rc::new(std::cell::Cell::new(false));
+    let on_answer = Rc::new(on_answer);
+    let finish = {
+        let answered = answered.clone();
+        let window = window.clone();
+        let on_answer = on_answer.clone();
+        // `close`: Fenster selbst schließen (Knopf, Esc); beim Schließen über
+        // die Titelleiste schließt es sich ohnehin.
+        move |index: usize, close: bool| {
+            if answered.replace(true) {
+                return;
+            }
+            if close {
+                window.close();
+            }
+            on_answer(index);
+        }
+    };
+    let finish = Rc::new(finish);
+    let mut default_button = None;
+    for (index, label) in question.buttons.iter().enumerate() {
+        let button = gtk::Button::with_mnemonic(label);
+        button.add_css_class("qs-button");
+        let finish = finish.clone();
+        button.connect_clicked(move |_| finish(index, true));
+        if index == question.default {
+            default_button = Some(button.clone());
+        }
+        row.append(&button);
+    }
+    {
+        let finish = finish.clone();
+        let cancel = question.cancel;
+        window.connect_close_request(move |_| {
+            finish(cancel, false);
+            glib::Propagation::Proceed
+        });
+    }
+    close_on_escape(&window);
+    window.set_default_widget(default_button.as_ref());
+    window.present();
+    if let Some(button) = default_button {
+        button.grab_focus();
+    }
 }
 
 pub fn show_error(application: &gtk::Application, message: &str) {

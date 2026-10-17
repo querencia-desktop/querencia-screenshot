@@ -46,63 +46,6 @@ window.qs-window .qs-preview {
   border: 1px solid #c0c0c0;
 }
 
-/* Titelleiste: flach und hell wie die labwc-Standarddekoration
-   (#e1dedb aktiv, #f6f5f4 inaktiv, Rahmen #aaaaaa), ohne Rundungen. */
-window.qs-window headerbar.qs-titlebar {
-  background: #e1dedb;
-  border-bottom: 1px solid #aaaaaa;
-  border-radius: 0;
-  box-shadow: none;
-  color: #000000;
-  min-height: 26px;
-  padding: 0 6px;
-}
-
-window.qs-window:backdrop headerbar.qs-titlebar {
-  background: #f6f5f4;
-  color: #505050;
-}
-
-window.qs-window headerbar.qs-titlebar .title {
-  font-weight: bold;
-}
-
-window.qs-window headerbar.qs-titlebar windowcontrols button {
-  background: #f0eeeb;
-  border: 1px solid #aaaaaa;
-  border-radius: 2px;
-  box-shadow: none;
-  color: #000000;
-  margin: 0 1px;
-  min-height: 18px;
-  min-width: 18px;
-  padding: 0;
-  transition: none;
-}
-
-window.qs-window headerbar.qs-titlebar windowcontrols button:hover {
-  background: #ffffff;
-}
-
-/* Clientseitige Dekoration ohne runde Ecken; ein feiner Rahmen statt des
-   breiten GTK-Schattens, damit das Fenster neben labwc-Fenstern nicht
-   auffällt. */
-window.qs-window.csd,
-window.qs-window.solid-csd {
-  border-radius: 0;
-}
-
-window.qs-window.csd decoration {
-  border-radius: 0;
-  box-shadow: 0 0 0 1px #888888, 0 2px 6px rgba(0, 0, 0, 0.3);
-  margin: 8px;
-}
-
-window.qs-window.solid-csd decoration {
-  border: 1px solid #888888;
-  border-radius: 0;
-}
-
 /* ---- QS-0d: Auswahlfenster ------------------------------------------ */
 
 window.qs-window .qs-heading {
