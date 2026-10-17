@@ -596,23 +596,58 @@ fn copy_now(dialog: &Rc<Dialog>) {
     });
 }
 
+/// „Ordner wählen“: GTK-Ordnerdialog im eigenen Prozess, modal über
+/// „Bildschirmfoto speichern“.
+///
+/// Nicht `gtk::FileDialog` (QREL-04b, F-01): Der schickt die Wahl an
+/// xdg-desktop-portal-gtk. Dessen Fenster gehört einem anderen Prozess und
+/// hängt nur über xdg-foreign an unserem *modalen* Speicherfenster; labwc
+/// 0.9.8 gibt den Tastaturfokus in so einer Fensterfamilie dem modalen
+/// Dialog (`desktop_focus_view` → `view_get_modal_dialog`), also unserem
+/// Speicherfenster – das Portalfenster bekam nie Tasten (kein Strg+L, keine
+/// Pfadeingabe, kein Esc). Ein eigener modaler Dialog ist selbst der modale
+/// Dialog seiner Familie und erhält den Fokus; dazu labwc-Titelleiste statt
+/// GTK-Kopfleiste und deutsche Knöpfe. GtkFileChooserDialog ist seit GTK
+/// 4.10 als veraltet markiert, aber in GTK 4.22 vorhanden.
+#[allow(deprecated)]
 fn choose_folder(dialog: &Rc<Dialog>) {
-    let chooser = gtk::FileDialog::builder()
+    use gtk::prelude::{DialogExt as _, FileChooserExt as _};
+    // use_header_bar(0): Knöpfe unten wie in GNOME 2, Titelleiste von
+    // labwc (keine GTK-Kopfleiste, siehe „Fensterdekoration“ in ui.rs).
+    let chooser = gtk::FileChooserDialog::builder()
         .title("Ordner für das Bildschirmfoto wählen")
-        .accept_label("Auswählen")
+        .transient_for(&dialog.window)
         .modal(true)
+        .use_header_bar(0)
+        .action(gtk::FileChooserAction::SelectFolder)
+        .default_width(760)
+        .default_height(500)
         .build();
+    chooser.add_button("_Abbrechen", gtk::ResponseType::Cancel);
+    chooser.add_button("_Auswählen", gtk::ResponseType::Accept);
+    chooser.set_default_response(gtk::ResponseType::Accept);
+    chooser.add_css_class("qs-window");
+    // Kein set_icon_name, siehe „Fenstersymbol“ in ui.rs.
     let current = dialog.folder.borrow().clone();
     let start = current
         .ancestors()
         .find(|path| path.is_dir())
         .map(Path::to_path_buf)
         .unwrap_or_else(glib::home_dir);
-    chooser.set_initial_folder(Some(&gio::File::for_path(start)));
+    if let Err(error) = chooser.set_current_folder(Some(&gio::File::for_path(&start))) {
+        println!(
+            "querencia-screenshot: Startordner {}: {error}",
+            start.display()
+        );
+    }
     let dialog = dialog.clone();
-    let parent = dialog.window.clone();
-    chooser.select_folder(Some(&parent), gio::Cancellable::NONE, move |result| {
-        let Ok(file) = result else {
+    chooser.connect_response(move |chooser, response| {
+        let chosen = (response == gtk::ResponseType::Accept)
+            .then(|| chooser.file())
+            .flatten();
+        chooser.destroy();
+        let Some(file) = chosen else {
+            println!("querencia-screenshot: Ordnerwahl abgebrochen");
             return;
         };
         let Some(path) = file.path() else {
@@ -621,12 +656,15 @@ fn choose_folder(dialog: &Rc<Dialog>) {
                 .set_text("Nur lokale Ordner werden unterstützt.");
             return;
         };
+        println!("querencia-screenshot: Ordner gewählt: {}", path.display());
         dialog.folder_label.set_text(&path.display().to_string());
         dialog
             .status
             .set_text(directory_problem(&path).as_deref().unwrap_or(""));
         dialog.folder.replace(path);
     });
+    chooser.present();
+    println!("querencia-screenshot: Ordnerwahl geöffnet");
 }
 
 #[cfg(test)]

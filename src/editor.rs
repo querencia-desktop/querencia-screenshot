@@ -800,9 +800,7 @@ fn choose_custom_color(editor: &Rc<Editor>) {
         chooser.set_show_editor(true);
         chooser
     };
-    let hint = gtk::Label::new(Some(
-        "Farbton und Farbfeld wählen oder „#RRGGBB“ eingeben.",
-    ));
+    let hint = gtk::Label::new(Some("Farbton und Farbfeld wählen oder „#RRGGBB“ eingeben."));
     hint.set_xalign(0.0);
     hint.add_css_class("qs-hint");
     let cancel = ui::button("Abbrechen", &["process-stop", "window-close"]);
@@ -885,7 +883,9 @@ fn choose_custom_color(editor: &Rc<Editor>) {
         if !matches!(key, gdk::Key::Return | gdk::Key::KP_Enter) {
             return glib::Propagation::Proceed;
         }
-        let focus = window_weak.upgrade().and_then(|window| GtkWindowExt::focus(&window));
+        let focus = window_weak
+            .upgrade()
+            .and_then(|window| GtkWindowExt::focus(&window));
         match focus {
             Some(widget) if widget.is::<gtk::Button>() => glib::Propagation::Proceed,
             Some(widget) if widget.is::<gtk::Text>() => {
@@ -893,7 +893,11 @@ fn choose_custom_color(editor: &Rc<Editor>) {
                     .downcast::<gtk::Text>()
                     .map(|text| text.text().trim().to_owned())
                     .unwrap_or_default();
-                let typed = if typed.starts_with('#') { typed } else { format!("#{typed}") };
+                let typed = if typed.starts_with('#') {
+                    typed
+                } else {
+                    format!("#{typed}")
+                };
                 match Color::from_id(&typed) {
                     Some(color) => {
                         finish(Some(color));
