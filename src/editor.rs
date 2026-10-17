@@ -112,6 +112,8 @@ struct Editor {
     /// Farbschaltfläche der Werkzeugleiste (gesetzt, sobald sie gebaut ist).
     palette: RefCell<Option<Palette>>,
     width: Cell<Width>,
+    /// Strichstärken-Schaltfläche der Werkzeugleiste (ebenso).
+    stroke: RefCell<Option<Stroke>>,
     fit: Cell<bool>,
     busy: Cell<bool>,
     force_close: Cell<bool>,
@@ -158,6 +160,7 @@ impl Editor {
             "palette",
             "color-custom",
             "width",
+            "stroke",
             "fit",
         ] {
             self.set_enabled(name, !text_mode && !self.busy.get());
@@ -172,6 +175,22 @@ impl Editor {
             palette.current.queue_draw();
             palette.custom_swatch.set_visible(color.is_custom());
             palette.custom_swatch.queue_draw();
+        }
+        if let Some(stroke) = self.stroke.borrow().as_ref() {
+            let width = self.width.get();
+            stroke.button.set_sensitive(!text_mode && !self.busy.get());
+            stroke.button.set_tooltip_text(Some(&format!(
+                "Strichstärke: {} – Auswahl öffnen (S)",
+                width.label()
+            )));
+            stroke.value.set_text(&width.label());
+            // Schieberegler nachführen (z. B. nach der Menü-Schnellwahl);
+            // gleicher Wert löst keine neue Aktion aus.
+            if Width::from_px(stroke.scale.value()) != width {
+                stroke.scale.set_value(width.pixels());
+            }
+            stroke.current.queue_draw();
+            stroke.preview.queue_draw();
         }
         self.set_enabled("undo", !text_mode && marks.can_undo());
         self.set_enabled("redo", !text_mode && marks.can_redo());
@@ -299,10 +318,11 @@ pub fn open(application: &gtk::Application, source: Source) {
         current: RefCell::new(None),
         drag_start: Cell::new(None),
         text_at: Cell::new(None),
-        tool: Cell::new(Tool::Ellipse),
+        tool: Cell::new(Tool::DEFAULT),
         color: Cell::new(Color::RED),
         palette: RefCell::new(None),
-        width: Cell::new(Width::Medium),
+        width: Cell::new(Width::MEDIUM),
+        stroke: RefCell::new(None),
         fit: Cell::new(true),
         busy: Cell::new(false),
         force_close: Cell::new(false),
@@ -341,8 +361,13 @@ pub fn open(application: &gtk::Application, source: Source) {
     window.present();
     area.grab_focus();
     println!(
-        "querencia-screenshot: Editor geöffnet: {} ({} × {} Pixel)",
-        editor.description, iw, ih
+        "querencia-screenshot: Editor geöffnet: {} ({} × {} Pixel) – Werkzeug {}, {}, {}",
+        editor.description,
+        iw,
+        ih,
+        editor.tool.get().label(),
+        editor.color.get().label(),
+        editor.width.get().label()
     );
 }
 
@@ -415,7 +440,7 @@ fn install_actions(application: &gtk::Application, editor: &Rc<Editor>) {
         });
         window.add_action(&action);
     };
-    stateful("tool", Tool::Ellipse.id(), |editor, id| {
+    stateful("tool", Tool::DEFAULT.id(), |editor, id| {
         Tool::from_id(id)
             .map(|tool| editor.tool.set(tool))
             .is_some()
@@ -434,10 +459,18 @@ fn install_actions(application: &gtk::Application, editor: &Rc<Editor>) {
         }
     });
     simple("color-custom", choose_custom_color);
-    stateful("width", Width::Medium.id(), |editor, id| {
-        Width::from_id(id)
-            .map(|width| editor.width.set(width))
-            .is_some()
+    stateful("width", &Width::MEDIUM.id(), |editor, id| {
+        let Some(width) = Width::from_id(id) else {
+            return false;
+        };
+        editor.width.set(width);
+        println!("querencia-screenshot: Strichstärke: {}", width.label());
+        true
+    });
+    simple("stroke", |editor| {
+        if let Some(stroke) = editor.stroke.borrow().as_ref() {
+            stroke.button.popup();
+        }
     });
 
     let fit = gio::SimpleAction::new_stateful("fit", None, &true.to_variant());
@@ -461,6 +494,7 @@ fn install_actions(application: &gtk::Application, editor: &Rc<Editor>) {
         ("win.undo", &["<Control>z"]),
         ("win.redo", &["<Control><Shift>z", "<Control>y"]),
         ("win.palette", &["f"]),
+        ("win.stroke", &["s"]),
     ] {
         application.set_accels_for_action(action, accels);
     }
@@ -528,12 +562,13 @@ fn menu_bar() -> gtk::PopoverMenuBar {
     );
     tools.append_section(Some("Farbe"), &colors);
     let widths = gio::Menu::new();
-    for width in Width::ALL {
+    for (width, name) in Width::PRESETS {
         widths.append(
-            Some(width.label()),
+            Some(&format!("{name} ({})", width.label())),
             Some(&format!("win.width::{}", width.id())),
         );
     }
+    widths.append(Some("_Strichstärke einstellen …"), Some("win.stroke"));
     tools.append_section(Some("Strichstärke"), &widths);
     menu.append_submenu(Some("_Werkzeuge"), &tools);
 
@@ -918,15 +953,142 @@ fn choose_custom_color(editor: &Rc<Editor>) {
     println!("querencia-screenshot: Farbdialog geöffnet");
 }
 
-fn width_icon(width: Width) -> gtk::DrawingArea {
-    drawn_icon(20, move |cr, s| {
+/// Strichstärken-Schaltfläche der Werkzeugleiste: zeigt die aktuelle Stärke
+/// als Linie, klappt ein Popover mit Schieberegler (1 … 20 px) auf.
+struct Stroke {
+    button: gtk::MenuButton,
+    /// Linie auf der Schaltfläche.
+    current: gtk::DrawingArea,
+    scale: gtk::Scale,
+    /// „4 px“ neben dem Schieberegler.
+    value: gtk::Label,
+    /// Vorschau der Linie in Originalstärke und aktueller Farbe.
+    preview: gtk::DrawingArea,
+}
+
+fn current_width(weak: &Weak<Editor>) -> Width {
+    upgrade(weak).map_or(Width::MEDIUM, |editor| editor.width.get())
+}
+
+fn stroke_button(editor: &Rc<Editor>) -> gtk::MenuButton {
+    let weak = Rc::downgrade(editor);
+    let current = gtk::DrawingArea::new();
+    current.set_content_width(32);
+    current.set_content_height(18);
+    current.set_draw_func(move |_, cr, w, h| {
+        let (w, h) = (f64::from(w), f64::from(h));
+        // 1 … 20 px auf 1 … 10 Bildschirmpixel abgebildet
+        let px = f64::from(current_width(&weak).px());
+        let line = 1.0 + (px - 1.0) * 9.0 / 19.0;
         cr.set_source_rgb(0.19, 0.19, 0.19);
-        cr.set_line_width(width.pixels() * 0.75);
+        cr.rectangle(1.0, (h - line) / 2.0, w - 13.0, line);
+        cr.fill().ok();
+        // Klapppfeil wie bei der Farbschaltfläche
+        cr.move_to(w - 7.0, h / 2.0 - 2.0);
+        cr.line_to(w - 1.0, h / 2.0 - 2.0);
+        cr.line_to(w - 4.0, h / 2.0 + 2.0);
+        cr.close_path();
+        cr.fill().ok();
+    });
+
+    let heading = gtk::Label::new(Some("Strichstärke"));
+    heading.set_xalign(0.0);
+    heading.add_css_class("qs-stroke-heading");
+    let scale = gtk::Scale::with_range(
+        gtk::Orientation::Horizontal,
+        f64::from(Width::MIN),
+        f64::from(Width::MAX),
+        1.0,
+    );
+    scale.set_digits(0);
+    scale.set_round_digits(0);
+    scale.set_draw_value(false);
+    scale.set_increments(1.0, 5.0);
+    scale.set_value(editor.width.get().pixels());
+    scale.set_size_request(200, -1);
+    scale.set_hexpand(true);
+    scale.update_property(&[gtk::accessible::Property::Label("Strichstärke in Pixeln")]);
+    let value = gtk::Label::new(Some(&editor.width.get().label()));
+    value.set_width_chars(5);
+    value.set_xalign(1.0);
+    value.add_css_class("qs-stroke-value");
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    row.append(&scale);
+    row.append(&value);
+
+    let weak = Rc::downgrade(editor);
+    let preview = gtk::DrawingArea::new();
+    preview.set_content_height(24);
+    preview.set_draw_func(move |_, cr, w, h| {
+        let Some(editor) = upgrade(&weak) else {
+            return;
+        };
+        let (r, g, b) = editor.color.get().rgb();
+        cr.set_source_rgb(r, g, b);
+        cr.set_line_width(editor.width.get().pixels());
         cr.set_line_cap(cairo::LineCap::Round);
-        cr.move_to(s * 0.15, s * 0.5);
-        cr.line_to(s * 0.85, s * 0.5);
+        cr.move_to(14.0, f64::from(h) / 2.0);
+        cr.line_to(f64::from(w) - 14.0, f64::from(h) / 2.0);
         cr.stroke().ok();
-    })
+    });
+    preview.add_css_class("qs-stroke-preview");
+
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 6);
+    content.append(&heading);
+    content.append(&row);
+    content.append(&preview);
+    let popover = gtk::Popover::new();
+    popover.set_child(Some(&content));
+    popover.set_has_arrow(false);
+    popover.set_position(gtk::PositionType::Bottom);
+    popover.add_css_class("qs-stroke");
+
+    // Wert sofort übernehmen (wirkt auf neue Markierungen).
+    let weak = Rc::downgrade(editor);
+    scale.connect_value_changed(move |scale| {
+        let Some(editor) = upgrade(&weak) else {
+            return;
+        };
+        let width = Width::from_px(scale.value());
+        if width != editor.width.get() {
+            WidgetExt::activate_action(&editor.window, "win.width", Some(&width.id().to_variant()))
+                .ok();
+        }
+    });
+    // Tastatur: beim Öffnen steht der Fokus auf dem Schieberegler
+    // (Pfeiltasten ±1, Bild auf/ab ±5, Pos1/Ende 1/20 px); Eingabetaste und
+    // Esc schließen, ein Klick daneben ebenso.
+    let focus = scale.clone();
+    popover.connect_map(move |_| {
+        focus.grab_focus();
+    });
+    let keys = gtk::EventControllerKey::new();
+    let weak_popover = popover.downgrade();
+    keys.connect_key_pressed(move |_, key, _, _| {
+        if matches!(key, gdk::Key::Return | gdk::Key::KP_Enter) {
+            if let Some(popover) = weak_popover.upgrade() {
+                popover.popdown();
+            }
+            return glib::Propagation::Stop;
+        }
+        glib::Propagation::Proceed
+    });
+    popover.add_controller(keys);
+
+    let button = gtk::MenuButton::new();
+    button.set_child(Some(&current));
+    button.set_popover(Some(&popover));
+    button.set_focus_on_click(false);
+    button.add_css_class("qs-stroke-button");
+    button.update_property(&[gtk::accessible::Property::Label("Strichstärke")]);
+    editor.stroke.replace(Some(Stroke {
+        button: button.clone(),
+        current,
+        scale,
+        value,
+        preview,
+    }));
+    button
 }
 
 /// Ersatzsymbole, falls das Symbolthema keines liefert.
@@ -1073,14 +1235,7 @@ fn toolbar(editor: &Rc<Editor>) -> gtk::Box {
     bar.append(&separator());
     bar.append(&palette_button(editor));
     bar.append(&separator());
-    for width in Width::ALL {
-        bar.append(&radio(
-            &width_icon(width),
-            &format!("Strichstärke: {}", width.label()),
-            "win.width",
-            width.id(),
-        ));
-    }
+    bar.append(&stroke_button(editor));
     bar.append(&separator());
     let fit = gtk::ToggleButton::with_label("Einpassen");
     fit.set_tooltip_text(Some(

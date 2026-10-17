@@ -262,7 +262,7 @@ pub mod tests {
         Mark {
             shape,
             color: Color::RED,
-            width: Width::Medium,
+            width: Width::MEDIUM,
         }
     }
 
@@ -307,7 +307,7 @@ pub mod tests {
             Mark {
                 shape: Shape::Pen(vec![Point::new(20.0, 150.0), Point::new(120.0, 150.0)]),
                 color: Color::BLUE,
-                width: Width::Thick,
+                width: Width::THICK,
             },
             Mark {
                 shape: Shape::Text(
@@ -315,7 +315,7 @@ pub mod tests {
                     "Hier stimmt etwas nicht – Größe".into(),
                 ),
                 color: Color::BLACK,
-                width: Width::Medium,
+                width: Width::MEDIUM,
             },
         ];
         let result = compose(&original, &marks).expect("compose");

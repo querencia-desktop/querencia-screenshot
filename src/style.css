@@ -226,3 +226,41 @@ popover.qs-palette separator {
   min-height: 1px;
   min-width: 0;
 }
+
+/* ---- Strichstärke (QS-0.2.4): eine Schaltfläche, Popover mit Regler ---- */
+
+window.qs-editor .qs-toolbar menubutton.qs-stroke-button > button {
+  padding: 2px 4px;
+}
+
+window.qs-editor .qs-toolbar menubutton.qs-stroke-button > button:checked {
+  background: #d6d2cd;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+popover.qs-stroke > contents {
+  background: #f5f4f2;
+  border: 1px solid #888888;
+  border-radius: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  color: #303030;
+  padding: 6px 8px;
+}
+
+popover.qs-stroke label.qs-stroke-heading {
+  font-weight: bold;
+}
+
+popover.qs-stroke label.qs-stroke-value {
+  font-feature-settings: "tnum";
+}
+
+popover.qs-stroke .qs-stroke-preview {
+  background: #ffffff;
+  border: 1px solid #b0b0b0;
+}
+
+popover.qs-stroke scale:focus-visible {
+  outline: 1px dotted #303030;
+  outline-offset: 1px;
+}

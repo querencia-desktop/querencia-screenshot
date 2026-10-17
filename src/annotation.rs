@@ -21,6 +21,11 @@ pub enum Tool {
 }
 
 impl Tool {
+    /// Werkzeug beim Öffnen jedes Editors (QS-0.2.4: Freies Zeichnen; bis
+    /// 0.2.3 Kreis/Ellipse). Startwert des Editors und der Aktion
+    /// `win.tool` kommen beide von hier.
+    pub const DEFAULT: Tool = Tool::Pen;
+
     pub const ALL: [Tool; 5] = [
         Tool::Pen,
         Tool::Ellipse,
@@ -241,52 +246,59 @@ impl Color {
     }
 }
 
+/// Strichstärke in Originalpixeln, 1 … 20 (QS-0.2.4: Schieberegler statt
+/// der drei Stufen Dünn 2 / Mittel 4 / Dick 8).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Width {
-    Thin,
-    Medium,
-    Thick,
-}
+pub struct Width(u8);
 
 impl Width {
-    pub const ALL: [Width; 3] = [Width::Thin, Width::Medium, Width::Thick];
+    pub const MIN: u8 = 1;
+    pub const MAX: u8 = 20;
+    /// Bisherige Stufen, im Menü Werkzeuge als Schnellwahl.
+    pub const THIN: Width = Width(2);
+    /// Standard wie bisher („Mittel“).
+    pub const MEDIUM: Width = Width(4);
+    pub const THICK: Width = Width(8);
+    pub const PRESETS: [(Width, &'static str); 3] = [
+        (Width::THIN, "Dünn"),
+        (Width::MEDIUM, "Mittel"),
+        (Width::THICK, "Dick"),
+    ];
 
-    pub fn id(self) -> &'static str {
-        match self {
-            Self::Thin => "duenn",
-            Self::Medium => "mittel",
-            Self::Thick => "dick",
-        }
+    /// Auf 1 … 20 begrenzt.
+    pub fn from_px(px: f64) -> Self {
+        let px = if px.is_finite() { px.round() } else { 4.0 };
+        Self(px.clamp(f64::from(Self::MIN), f64::from(Self::MAX)) as u8)
+    }
+
+    pub fn px(self) -> u8 {
+        self.0
+    }
+
+    /// Kennung für die Aktion `win.width`: die Pixelzahl („4“).
+    pub fn id(self) -> String {
+        self.0.to_string()
     }
 
     pub fn from_id(id: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|width| width.id() == id)
+        let px: u8 = id.parse().ok()?;
+        (Self::MIN..=Self::MAX).contains(&px).then_some(Self(px))
     }
 
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Thin => "Dünn",
-            Self::Medium => "Mittel",
-            Self::Thick => "Dick",
-        }
+    /// „4 px“
+    pub fn label(self) -> String {
+        format!("{} px", self.0)
     }
 
     /// Linienbreite in Originalpixeln.
     pub fn pixels(self) -> f64 {
-        match self {
-            Self::Thin => 2.0,
-            Self::Medium => 4.0,
-            Self::Thick => 8.0,
-        }
+        f64::from(self.0)
     }
 
-    /// Schriftgröße für Text in Originalpixeln.
+    /// Schriftgröße für Text in Originalpixeln: 12 + 3 × Stärke – bei 4 und
+    /// 8 px genau die bisherigen 24 und 36 (Mittel, Dick).
     pub fn font_size(self) -> f64 {
-        match self {
-            Self::Thin => 16.0,
-            Self::Medium => 24.0,
-            Self::Thick => 36.0,
-        }
+        12.0 + 3.0 * f64::from(self.0)
     }
 }
 
@@ -486,7 +498,7 @@ mod tests {
         Mark {
             shape: Shape::Ellipse(Point::new(x, 10.0), Point::new(x + 50.0, 40.0)),
             color: Color::RED,
-            width: Width::Medium,
+            width: Width::MEDIUM,
         }
     }
 
@@ -499,12 +511,14 @@ mod tests {
             assert_eq!(Color::from_id(&named.color.id()), Some(named.color));
             assert_eq!(named.color.id(), named.id);
         }
-        for width in Width::ALL {
-            assert_eq!(Width::from_id(width.id()), Some(width));
+        for px in Width::MIN..=Width::MAX {
+            let width = Width::from_px(f64::from(px));
+            assert_eq!(width.px(), px);
+            assert_eq!(Width::from_id(&width.id()), Some(width));
         }
         assert_eq!(Color::RED.rgb(), (0.90, 0.0, 0.0));
-        assert!(Width::Thin.pixels() < Width::Medium.pixels());
-        assert!(Width::Medium.pixels() < Width::Thick.pixels());
+        assert!(Width::THIN.pixels() < Width::MEDIUM.pixels());
+        assert!(Width::MEDIUM.pixels() < Width::THICK.pixels());
         assert_eq!(Tool::from_id("unbekannt"), None);
     }
 
@@ -547,6 +561,24 @@ mod tests {
         ] {
             assert_eq!(dark.halo(), (1.0, 1.0, 1.0));
         }
+    }
+
+    #[test]
+    fn default_tool_is_pen_and_widths_cover_one_to_twenty_pixels() {
+        assert_eq!(Tool::DEFAULT, Tool::Pen);
+        // Standardstärke bleibt 4 px („Mittel“), Text wie bisher 24/36.
+        assert_eq!(Width::MEDIUM.pixels(), 4.0);
+        assert_eq!(Width::MEDIUM.label(), "4 px");
+        assert_eq!(Width::MEDIUM.font_size(), 24.0);
+        assert_eq!(Width::THICK.font_size(), 36.0);
+        assert_eq!(Width::from_px(0.0).px(), 1);
+        assert_eq!(Width::from_px(25.0).px(), 20);
+        assert_eq!(Width::from_px(9.6).px(), 10);
+        assert_eq!(Width::from_px(f64::NAN).px(), 4);
+        for bad in ["0", "21", "", "mittel", "-3", "4.5"] {
+            assert_eq!(Width::from_id(bad), None, "{bad}");
+        }
+        assert_eq!(Width::from_id("20"), Some(Width::from_px(20.0)));
     }
 
     #[test]
@@ -693,7 +725,7 @@ mod tests {
                 !marks.add(Mark {
                     shape: shape.clone(),
                     color: Color::RED,
-                    width: Width::Thin
+                    width: Width::THIN
                 }),
                 "{shape:?}"
             );
@@ -702,7 +734,7 @@ mod tests {
         assert!(marks.add(Mark {
             shape: Shape::Pen(vec![dot]),
             color: Color::RED,
-            width: Width::Thin
+            width: Width::THIN
         }));
     }
 
