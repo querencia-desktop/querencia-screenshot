@@ -12,7 +12,12 @@ Aufruf: querencia-screenshot [OPTION]
 Ohne Option öffnet sich das Auswahlfenster „Was möchten Sie aufnehmen?“.
 
   -s, --screen        sofort den ganzen Bildschirm aufnehmen
-  -w, --window        sofort das aktive Fenster aufnehmen bzw. einrahmen
+  -w, --window        sofort ein Fenster wählen: erkannte Fenster werden beim
+                      Darüberfahren hervorgehoben, Klick nimmt das Fenster
+                      samt Titelleiste und Rahmen auf; außerhalb erkannter
+                      Fenster mit gedrückter Maustaste frei einrahmen;
+                      Esc bricht ab. Ein Vollbildfenster wird direkt
+                      aufgenommen, ohne aktives Fenster der ganze Bildschirm.
   -a, --area          sofort einen Bereich mit der Maus aufziehen
   -o, --open DATEI    ein vorhandenes PNG-Bild im Editor öffnen
   -h, --help          diese Hilfe anzeigen

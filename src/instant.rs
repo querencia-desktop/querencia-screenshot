@@ -13,6 +13,7 @@ use std::{
     cell::RefCell,
     path::{Path, PathBuf},
     rc::Rc,
+    time::Instant,
 };
 
 use gtk::{gdk, gio, glib, prelude::*};
@@ -21,11 +22,13 @@ use crate::{
     capture::{self, CaptureError, Scope},
     cli::Target,
     clipboard, editor,
+    geometry::Region,
     runner::{self, CommandRunner},
     screenshot::Png,
     storage,
-    toplevel::{self, WindowPlan, WindowQuery},
+    toplevel::{self, Desktop, WindowPlan},
     ui,
+    window_pick::{self, Found, FrameStyle, Image, Kind},
 };
 
 /// Eine fertige Aufnahme und ein Satz, was sie zeigt.
@@ -35,12 +38,22 @@ pub struct Shot {
     pub description: String,
 }
 
-/// Nimmt `target` auf, ohne GTK. `Ok(None)`: der Benutzer hat die
-/// Bereichsauswahl abgebrochen; es entsteht keine Datei.
+/// Nimmt `target` auf. `Ok(None)`: der Benutzer hat die Auswahl
+/// abgebrochen; es entsteht keine Datei. `desktop` wird nur für `--window`
+/// gefragt.
 pub fn perform(
     runner: &dyn CommandRunner,
     target: Target,
-    query: impl FnOnce() -> WindowQuery,
+    desktop: impl FnOnce() -> Desktop,
+) -> Result<Option<Shot>, CaptureError> {
+    perform_with_style(runner, target, desktop, window_pick::load_style)
+}
+
+fn perform_with_style(
+    runner: &dyn CommandRunner,
+    target: Target,
+    desktop: impl FnOnce() -> Desktop,
+    style: impl FnOnce() -> FrameStyle,
 ) -> Result<Option<Shot>, CaptureError> {
     let framed = |description: String| -> Result<Option<Shot>, CaptureError> {
         let Some(region) = capture::select_region(runner)? else {
@@ -59,26 +72,245 @@ pub fn perform(
     match target {
         Target::Screen => whole("Bildschirm"),
         Target::Area => framed("Bereich".to_owned()),
-        Target::Window => match toplevel::plan(query()) {
-            WindowPlan::Output { output, window } => {
-                let png = capture::capture(runner, &Scope::Output(output.clone()))?;
-                Ok(Some(Shot {
-                    png,
-                    description: format!("Fenster „{}“ (Vollbild auf {output})", window.label()),
-                }))
+        Target::Window => {
+            let desktop = desktop();
+            match toplevel::plan(desktop.query.clone()) {
+                WindowPlan::Output { output, window } => {
+                    let png = capture::capture(runner, &Scope::Output(output.clone()))?;
+                    Ok(Some(Shot {
+                        png,
+                        description: format!(
+                            "Fenster „{}“ (Vollbild auf {output})",
+                            window.label()
+                        ),
+                    }))
+                }
+                WindowPlan::Frame { window } => pick_window(runner, &desktop, window, style),
+                WindowPlan::Everything => whole("Kein aktives Fenster – ganzer Bildschirm"),
             }
-            WindowPlan::Frame {
-                window: Some(window),
-            } => framed(format!(
-                "Fenster „{}“, mit der Maus eingerahmt (labwc meldet keine Fenstergrenzen)",
-                window.label()
-            )),
-            WindowPlan::Frame { window: None } => framed(
-                "Fenster, mit der Maus eingerahmt (aktives Fenster nicht ermittelbar)".to_owned(),
-            ),
-            WindowPlan::Everything => whole("Kein aktives Fenster – ganzer Bildschirm"),
-        },
+        }
     }
+}
+
+/// Ausgaben in Bildkoordinaten des eingefrorenen Vollbilds. grim legt alle
+/// Ausgaben ab der kleinsten Layout-Ecke in ein Bild, in der größten Skala.
+struct Layout {
+    origin: (i32, i32),
+    /// Bildpixel je logischem Pixel; `None`, wenn das Bild nicht zum
+    /// Layout passt.
+    scale: Option<i32>,
+    outputs: Vec<window_pick::Output>,
+}
+
+impl Layout {
+    fn new(outputs: &[toplevel::OutputInfo], width: i32, height: i32) -> Self {
+        if outputs.is_empty() {
+            return Self {
+                origin: (0, 0),
+                scale: Some(1),
+                outputs: vec![window_pick::Output {
+                    name: "Bild".to_owned(),
+                    area: Region {
+                        x: 0,
+                        y: 0,
+                        width: width.max(0) as u32,
+                        height: height.max(0) as u32,
+                    },
+                    usable_height: None,
+                    has_maximized: false,
+                }],
+            };
+        }
+        let min_x = outputs.iter().map(|o| o.x).min().unwrap_or(0);
+        let min_y = outputs.iter().map(|o| o.y).min().unwrap_or(0);
+        let max_x = outputs.iter().map(|o| o.x + o.width).max().unwrap_or(0);
+        let max_y = outputs.iter().map(|o| o.y + o.height).max().unwrap_or(0);
+        let (lw, lh) = (max_x - min_x, max_y - min_y);
+        let scale = (lw > 0 && lh > 0 && width % lw == 0 && height == lh * (width / lw))
+            .then_some(width / lw)
+            .filter(|s| *s >= 1);
+        let s = scale.unwrap_or(1);
+        Self {
+            origin: (min_x, min_y),
+            scale,
+            outputs: outputs
+                .iter()
+                .map(|o| window_pick::Output {
+                    name: o.name.clone(),
+                    area: Region {
+                        x: (o.x - min_x) * s,
+                        y: (o.y - min_y) * s,
+                        width: (o.width * s).max(0) as u32,
+                        height: (o.height * s).max(0) as u32,
+                    },
+                    usable_height: o.usable.map(|(_, h)| (h * s).max(0) as u32),
+                    has_maximized: o.has_maximized,
+                })
+                .collect(),
+        }
+    }
+
+    /// Bild → Layout (nur Skala 1 wird für erkannte Fenster benutzt).
+    fn to_layout(&self, area: Region) -> Region {
+        Region {
+            x: area.x + self.origin.0,
+            y: area.y + self.origin.1,
+            ..area
+        }
+    }
+
+    /// Layout → Bild.
+    fn to_image(&self, area: Region) -> Region {
+        let s = self.scale.unwrap_or(1);
+        Region {
+            x: (area.x - self.origin.0) * s,
+            y: (area.y - self.origin.1) * s,
+            width: area.width * s as u32,
+            height: area.height * s as u32,
+        }
+    }
+}
+
+/// Fensterwahl (Alt+Druck, „Fenster einrahmen“): Vollbild einfrieren,
+/// labwc-Rahmen erkennen, slurp mit den Rechtecken (Klick wählt, Ziehen
+/// rahmt frei ein, Esc bricht ab), Ausschnitt aus dem eingefrorenen Bild.
+fn pick_window(
+    runner: &dyn CommandRunner,
+    desktop: &Desktop,
+    active: Option<toplevel::ActiveWindow>,
+    style: impl FnOnce() -> FrameStyle,
+) -> Result<Option<Shot>, CaptureError> {
+    let manual = |region: Region| match &active {
+        Some(window) => format!(
+            "Fenster „{}“, mit der Maus eingerahmt ({})",
+            window.label(),
+            region.grim_argument()
+        ),
+        None => format!(
+            "Fenster, mit der Maus eingerahmt ({})",
+            region.grim_argument()
+        ),
+    };
+    let full = capture::capture(runner, &Scope::Everything)?;
+    let started = Instant::now();
+    let image = decode(&full)?;
+    let layout = Layout::new(&desktop.outputs, image.width, image.height);
+    if layout.scale != Some(1) {
+        // Skala ≠ 1 ist im isolierten Test nicht prüfbar: nur Einrahmen,
+        // wie bisher mit grim -g.
+        eprintln!(
+            "querencia-screenshot: Fensterwahl: Bild {}×{} passt nicht zu Skala 1 – nur Einrahmen",
+            image.width, image.height
+        );
+        let Some(region) = capture::select_region(runner)? else {
+            return Ok(None);
+        };
+        let png = capture::capture(runner, &Scope::Region(region))?;
+        return Ok(Some(Shot {
+            png,
+            description: manual(region),
+        }));
+    }
+    let style = style();
+    let found = window_pick::detect(&image, &style, &layout.outputs);
+    let boxes: Vec<(Region, String)> = window_pick::slurp_boxes(&image, &style, &found)
+        .into_iter()
+        .map(|(area, index)| (layout.to_layout(area), format!("f{index}")))
+        .collect();
+    let count = |kind: Kind| found.iter().filter(|f| f.kind == kind).count();
+    eprintln!(
+        "querencia-screenshot: Fensterwahl: {} Fenster erkannt ({} vollständig, {} teilverdeckt, {} maximiert; {} Rechtecke für slurp; {} ms; {} Fenster gemeldet, {} Ausgabe(n); Rahmenfarben: {})",
+        found.len(),
+        count(Kind::Complete),
+        count(Kind::Partial),
+        count(Kind::Maximized),
+        boxes.len(),
+        started.elapsed().as_millis(),
+        desktop.windows,
+        layout.outputs.len(),
+        style.source
+    );
+    for (index, window) in found.iter().enumerate() {
+        let shown = Found {
+            area: layout.to_layout(window.area),
+            ..*window
+        };
+        eprintln!(
+            "querencia-screenshot: Fensterwahl: f{index} {}",
+            shown.describe()
+        );
+    }
+    let Some(picked) = capture::pick_region(runner, &boxes)? else {
+        return Ok(None);
+    };
+    let chosen = picked
+        .label
+        .as_deref()
+        .and_then(|label| label.strip_prefix('f'))
+        .and_then(|index| index.parse::<usize>().ok())
+        .and_then(|index| found.get(index));
+    let (area, description) = match chosen {
+        Some(window) => {
+            let area = layout.to_layout(window.area);
+            let title = match (&active, window.active) {
+                (Some(active), true) => format!(" „{}“", active.label()),
+                _ => String::new(),
+            };
+            let note = match window.kind {
+                Kind::Complete => "",
+                Kind::Partial => ", teilweise verdeckt – darüberliegende Fenster sind mit im Bild",
+                Kind::Maximized => ", maximiert",
+            };
+            (
+                area,
+                format!("Fenster{title} (gewählt {}{note})", area.grim_argument()),
+            )
+        }
+        None => (picked.region, manual(picked.region)),
+    };
+    let Some(part) = image.crop(layout.to_image(area)) else {
+        return Err(CaptureError::Geometry(
+            crate::geometry::GeometryError::Degenerate(area),
+        ));
+    };
+    let png = encode(&part)?;
+    Ok(Some(Shot { png, description }))
+}
+
+/// PNG → RGBA (über GDK, ohne Anzeige).
+fn decode(png: &Png) -> Result<Image, CaptureError> {
+    let texture = gdk::Texture::from_bytes(&glib::Bytes::from(png.bytes())).map_err(|error| {
+        CaptureError::Failed {
+            status: -1,
+            stderr: format!("Bild nicht lesbar: {error}"),
+        }
+    })?;
+    let (width, height) = (texture.width(), texture.height());
+    let mut downloader = gdk::TextureDownloader::new(&texture);
+    downloader.set_format(gdk::MemoryFormat::R8g8b8a8);
+    let (bytes, stride) = downloader.download_bytes();
+    let row = width as usize * 4;
+    let mut rgba = Vec::with_capacity(row * height as usize);
+    for y in 0..height as usize {
+        rgba.extend_from_slice(&bytes[y * stride..y * stride + row]);
+    }
+    Ok(Image {
+        width,
+        height,
+        rgba,
+    })
+}
+
+/// RGBA → PNG.
+fn encode(image: &Image) -> Result<Png, CaptureError> {
+    let texture = gdk::MemoryTexture::new(
+        image.width,
+        image.height,
+        gdk::MemoryFormat::R8g8b8a8,
+        &glib::Bytes::from(&image.rgba),
+        image.width as usize * 4,
+    );
+    Png::new(texture.save_to_png_bytes().to_vec()).map_err(CaptureError::Image)
 }
 
 /// Startet die Aufnahme beim Aktivieren der Anwendung und zeigt danach den
@@ -89,7 +321,7 @@ pub fn start(application: &gtk::Application, target: Target) {
     let application = application.clone();
     glib::spawn_future_local(async move {
         let outcome = gio::spawn_blocking(move || {
-            perform(&runner::SystemRunner, target, toplevel::query_active)
+            perform(&runner::SystemRunner, target, toplevel::query_desktop)
         })
         .await;
         match outcome {
@@ -674,7 +906,7 @@ mod tests {
         capture::{GRIM, SLURP},
         runner::{Output, RunError, fake::FakeRunner},
         screenshot::sample,
-        toplevel::ActiveWindow,
+        toplevel::{ActiveWindow, WindowQuery},
     };
 
     fn exit(status: i32, stdout: &[u8], stderr: &str) -> Result<Output, RunError> {
@@ -685,18 +917,32 @@ mod tests {
         })
     }
 
-    fn never() -> WindowQuery {
+    fn never() -> Desktop {
         panic!("Fensterabfrage nur für --window")
     }
 
-    fn editor(fullscreen: bool) -> WindowQuery {
-        WindowQuery::Active(ActiveWindow {
+    fn style() -> FrameStyle {
+        FrameStyle::default()
+    }
+
+    fn editor(fullscreen: bool) -> Desktop {
+        Desktop::without_outputs(WindowQuery::Active(ActiveWindow {
             title: "Brief.txt – Editor".into(),
             app_id: "editor".into(),
             fullscreen,
             maximized: false,
             outputs: vec!["HEADLESS-2".into()],
-        })
+        }))
+    }
+
+    /// Ein echtes Vollbild-PNG 1280×720 mit einem aktiven Fenster bei
+    /// 100,80 (500×366) und einem inaktiven bei 700,40 (402×328).
+    fn screen_png() -> Vec<u8> {
+        use window_pick::tests::{BACKGROUND, window};
+        let mut image = Image::filled(1280, 720, BACKGROUND);
+        window(&mut image, 700, 40, 402, 328, false);
+        window(&mut image, 100, 80, 500, 366, true);
+        encode(&image).expect("png").bytes().to_vec()
     }
 
     #[test]
@@ -715,7 +961,7 @@ mod tests {
     #[test]
     fn fullscreen_window_is_its_output_exactly() {
         let runner = FakeRunner::default().respond(GRIM, exit(0, &sample(1280, 720), ""));
-        let shot = perform(&runner, Target::Window, || editor(true))
+        let shot = perform_with_style(&runner, Target::Window, || editor(true), style)
             .expect("ok")
             .expect("shot");
         assert_eq!(
@@ -726,40 +972,159 @@ mod tests {
     }
 
     #[test]
-    fn ordinary_window_is_framed_by_the_user_and_says_so() {
+    fn a_detected_window_is_offered_and_cut_from_the_frozen_image() {
         let runner = FakeRunner::default()
-            .respond(SLURP, exit(0, b"10,20 300x200\n", ""))
-            .respond(GRIM, exit(0, &sample(300, 200), ""));
-        let shot = perform(&runner, Target::Window, || editor(false))
+            .respond(GRIM, exit(0, &screen_png(), ""))
+            .respond(SLURP, exit(0, b"100,80 500x366;f1\n", ""));
+        let shot = perform_with_style(&runner, Target::Window, || editor(false), style)
             .expect("ok")
             .expect("shot");
-        assert!(shot.description.contains("„Brief.txt – Editor“"));
-        assert!(shot.description.contains("eingerahmt"));
+        assert_eq!(shot.png.dimensions(), Some((500, 366)));
         assert_eq!(
-            runner.calls.borrow()[1].args,
-            vec!["-t", "png", "-l", "1", "-g", "10,20 300x200", "-"]
+            shot.description,
+            "Fenster „Brief.txt – Editor“ (gewählt 100,80 500x366)"
         );
+        // Linke obere Ecke des Ausschnitts: Rahmen links (aktiv) unter der
+        // Rundung, rechts unten der Rahmen.
+        let (r, g, b) = crate::render::tests::pixel(&shot.png, 0, 20);
+        assert_eq!((r, g, b), (0x7a, 0x75, 0x70));
+        assert_eq!(
+            crate::render::tests::pixel(&shot.png, 499, 365),
+            (0x7a, 0x75, 0x70)
+        );
+        let calls = runner.calls.borrow();
+        assert_eq!(
+            calls.len(),
+            2,
+            "ein grim (eingefroren), ein slurp, kein zweites grim"
+        );
+        assert_eq!(calls[0].args, vec!["-t", "png", "-l", "1", "-"]);
+        assert_eq!(calls[1].program, SLURP);
+        let boxes = String::from_utf8(calls[1].stdin.clone().expect("stdin")).expect("utf8");
+        assert_eq!(boxes, "700,40 402x328 f0\n100,80 500x366 f1\n");
+    }
+
+    #[test]
+    fn an_inactive_window_is_named_without_the_active_title() {
+        let runner = FakeRunner::default()
+            .respond(GRIM, exit(0, &screen_png(), ""))
+            .respond(SLURP, exit(0, b"700,40 402x328;f0\n", ""));
+        let shot = perform_with_style(&runner, Target::Window, || editor(false), style)
+            .expect("ok")
+            .expect("shot");
+        assert_eq!(shot.png.dimensions(), Some((402, 328)));
+        assert_eq!(shot.description, "Fenster (gewählt 700,40 402x328)");
+    }
+
+    #[test]
+    fn dragging_still_frames_freely_and_says_so() {
+        let runner = FakeRunner::default()
+            .respond(GRIM, exit(0, &screen_png(), ""))
+            .respond(SLURP, exit(0, b"10,20 300x200;\n", ""));
+        let shot = perform_with_style(&runner, Target::Window, || editor(false), style)
+            .expect("ok")
+            .expect("shot");
+        assert_eq!(shot.png.dimensions(), Some((300, 200)));
+        assert_eq!(
+            shot.description,
+            "Fenster „Brief.txt – Editor“, mit der Maus eingerahmt (10,20 300x200)"
+        );
+        assert_eq!(runner.calls.borrow().len(), 2, "aus dem eingefrorenen Bild");
     }
 
     #[test]
     fn cancelling_the_frame_creates_nothing() {
-        let runner = FakeRunner::default().respond(SLURP, exit(1, b"", "selection cancelled\n"));
+        let runner = FakeRunner::default()
+            .respond(GRIM, exit(0, &screen_png(), ""))
+            .respond(SLURP, exit(1, b"", "selection cancelled\n"));
         assert!(
-            perform(&runner, Target::Window, || editor(false))
+            perform_with_style(&runner, Target::Window, || editor(false), style)
                 .expect("ok")
                 .is_none()
         );
+        assert_eq!(runner.calls.borrow().len(), 2, "kein zweites grim");
         let runner = FakeRunner::default().respond(SLURP, exit(1, b"", "selection cancelled\n"));
         assert!(perform(&runner, Target::Area, never).expect("ok").is_none());
         assert_eq!(runner.calls.borrow().len(), 1, "grim nicht gestartet");
     }
 
+    /// Echte Bildschirmfotos aus dem isolierten labwc prüfen (nur von Hand):
+    /// `QS_FENSTERBILDER=a.png:b.png cargo test echte -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn echte_bildschirmfotos() {
+        let paths = std::env::var("QS_FENSTERBILDER").unwrap_or_default();
+        for path in paths.split(':').filter(|p| !p.is_empty()) {
+            let png = Png::new(std::fs::read(path).expect("lesen")).expect("png");
+            let image = decode(&png).expect("decode");
+            let outputs: Vec<window_pick::Output> = (0..image.width / 1280)
+                .map(|i| window_pick::Output {
+                    has_maximized: std::env::var("QS_MAXIMIERT").is_ok(),
+                    usable_height: std::env::var("QS_MAXIMIERT")
+                        .ok()
+                        .and_then(|h| h.parse().ok()),
+                    ..window_pick::tests::output("A", i * 1280, 0, 1280, 720)
+                })
+                .collect();
+            let started = Instant::now();
+            let found = window_pick::detect(&image, &style(), &outputs);
+            let boxes = window_pick::slurp_boxes(&image, &style(), &found);
+            println!("{path}: {} ms", started.elapsed().as_millis());
+            for f in &found {
+                println!("  {}", f.describe());
+            }
+            for (b, i) in &boxes {
+                println!("  box f{i} {}", b.grim_argument());
+            }
+        }
+    }
+
+    #[test]
+    fn layout_maps_two_outputs_and_negative_origins_into_the_image() {
+        let outputs = vec![
+            toplevel::OutputInfo {
+                name: "L".into(),
+                x: -1280,
+                y: 0,
+                width: 1280,
+                height: 720,
+                usable: Some((1280, 690)),
+                has_maximized: true,
+            },
+            toplevel::OutputInfo {
+                name: "R".into(),
+                x: 0,
+                y: 0,
+                width: 1280,
+                height: 720,
+                ..Default::default()
+            },
+        ];
+        let layout = Layout::new(&outputs, 2560, 720);
+        assert_eq!(layout.scale, Some(1));
+        assert_eq!(layout.outputs[0].area.x, 0);
+        assert_eq!(layout.outputs[1].area.x, 1280);
+        assert_eq!(layout.outputs[0].usable_height, Some(690));
+        let area = Region {
+            x: 1300,
+            y: 10,
+            width: 5,
+            height: 5,
+        };
+        assert_eq!(layout.to_layout(area).x, 20);
+        assert_eq!(layout.to_image(layout.to_layout(area)), area);
+        assert_eq!(Layout::new(&outputs, 5120, 1440).scale, Some(2));
+        assert_eq!(Layout::new(&outputs, 2000, 720).scale, None);
+    }
+
     #[test]
     fn no_active_window_means_whole_screen_like_gnome_2() {
         let runner = FakeRunner::default().respond(GRIM, exit(0, &sample(2, 2), ""));
-        let shot = perform(&runner, Target::Window, || WindowQuery::NoActiveWindow)
-            .expect("ok")
-            .expect("shot");
+        let shot = perform(&runner, Target::Window, || {
+            Desktop::without_outputs(WindowQuery::NoActiveWindow)
+        })
+        .expect("ok")
+        .expect("shot");
         assert!(shot.description.starts_with("Kein aktives Fenster"));
     }
 

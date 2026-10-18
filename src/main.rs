@@ -20,6 +20,7 @@ mod screenshot;
 mod storage;
 mod toplevel;
 mod ui;
+mod window_pick;
 
 use gtk::{gio, glib, prelude::*};
 

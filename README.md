@@ -10,7 +10,7 @@ oder in die Zwischenablage kopieren.
 | Aufruf | Verhalten |
 |---|---|
 | `querencia-screenshot` (Druck) | Auswahlfenster „Was möchten Sie aufnehmen?“: Gesamten Bildschirm aufnehmen, Fenster einrahmen, Bereich auswählen |
-| `--window` (Alt+Druck) | aktives Fenster: Vollbildfenster exakt, sonst einrahmen (labwc meldet keine Fenstergrenzen); ohne aktives Fenster ganzer Bildschirm |
+| `--window` (Alt+Druck) | Fensterwahl: erkannte Fenster werden beim Darüberfahren hervorgehoben, Klick nimmt das Fenster samt Titelleiste und Rahmen auf, Ziehen außerhalb erkannter Fenster rahmt frei ein, Esc bricht ab; aktives Vollbildfenster exakt; ohne aktives Fenster ganzer Bildschirm |
 | `--screen`, `--area` | sofort Bildschirm bzw. Bereich |
 | `--open DATEI` | vorhandenes PNG bearbeiten; gespeichert wird unter neuem Namen, nie über das Original |
 
@@ -47,8 +47,8 @@ Originalgröße (`render::compose`).
 
 | Art | Umsetzung |
 |---|---|
-| Bereich / Fenster einrahmen | `slurp` liefert `x,y wxh`, `grim -g` nimmt nur diesen Bereich auf |
-| Fenster (Alt+Druck) | aktives Fenster über `zwlr_foreign_toplevel_manager_v1`; Vollbild → `grim -o`, sonst einrahmen |
+| Bereich | `slurp` liefert `x,y wxh`, `grim -g` nimmt nur diesen Bereich auf |
+| Fenster (Alt+Druck, „Fenster einrahmen“) | Vollbild → `grim -o`; sonst Bildschirm mit `grim` einfrieren, labwc-Fensterrahmen im Bild erkennen (`window_pick`), Rechtecke an `slurp` (stdin) zum Hervorheben/Anklicken; Ausschnitt aus dem eingefrorenen Bild. Beginnt ein Zug innerhalb eines erkannten Fensters, liefert slurp dieses Fenster; freies Einrahmen von Fensterteilen über „Bereich auswählen“ |
 | Bildschirm | `grim` nimmt alle Ausgaben in ein Bild auf |
 
 Vor der Aufnahme wird das Auswahlfenster verborgen; die Aufnahme beginnt erst
@@ -89,7 +89,8 @@ src/instant.rs     Sofortaufnahme, Speicherdialog
 src/editor.rs      Editor: Menüs, Werkzeugleiste, Zeichenfläche, Speichern, Kopieren
 src/annotation.rs  Markierungen, Rückgängig/Wiederholen (ohne GTK)
 src/render.rs      Zeichnen (cairo) und Zusammenführen zu PNG
-src/toplevel.rs    aktives Fenster (wlr-foreign-toplevel)
+src/toplevel.rs    Fenster und Ausgaben (wlr-foreign-toplevel, wlr-output-management)
+src/window_pick.rs Fensterwahl: Rahmenerkennung, Rechtecke für slurp
 src/capture.rs     Bereichsauswahl (slurp) und Aufnahme (grim)
 src/geometry.rs    Region: Parsen/Validieren von `x,y wxh`
 src/runner.rs      CommandRunner (System + Test-Attrappe), keine Shell

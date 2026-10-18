@@ -59,8 +59,8 @@ const CHOICES: [Choice; 3] = [
     Choice {
         target: Target::Window,
         label: "_Fenster einrahmen",
-        detail: "Das Fenster mit der Maus einrahmen: labwc meldet keine Fenstergrenzen, \
-                 eine automatische Fenstererkennung gibt es deshalb nicht. \
+        detail: "Fenster anklicken: erkannte Fenster werden beim Darüberfahren \
+                 hervorgehoben. Andere Fenster mit der Maus einrahmen. \
                  Ein Vollbildfenster wird direkt aufgenommen.",
         icons: &["window-new", "preferences-system-windows", "view-restore"],
     },
@@ -253,8 +253,12 @@ fn choice_button(choice: &Choice) -> gtk::Button {
 /// Im Auswahlfenster hat der Benutzer „Fenster einrahmen“ ausdrücklich
 /// gewählt: Ohne aktives Fenster wird trotzdem eingerahmt, nicht (wie bei
 /// Alt+Druck nach GNOME 2) der ganze Bildschirm genommen.
-fn chooser_window_query() -> toplevel::WindowQuery {
-    window_query_for_chooser(toplevel::query_active())
+fn chooser_desktop() -> toplevel::Desktop {
+    let desktop = toplevel::query_desktop();
+    toplevel::Desktop {
+        query: window_query_for_chooser(desktop.query.clone()),
+        ..desktop
+    }
 }
 
 fn window_query_for_chooser(query: toplevel::WindowQuery) -> toplevel::WindowQuery {
@@ -291,7 +295,7 @@ fn begin_capture(state: &Rc<State>, target: Target) {
 fn run_capture(state: Rc<State>, target: Target) {
     glib::spawn_future_local(async move {
         let outcome = gio::spawn_blocking(move || {
-            instant::perform(&runner::SystemRunner, target, chooser_window_query)
+            instant::perform(&runner::SystemRunner, target, chooser_desktop)
         })
         .await;
         *state.busy.borrow_mut() = false;
