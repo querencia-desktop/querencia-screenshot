@@ -1,9 +1,9 @@
 [package]
 name = "querencia-screenshot"
-version = "0.2.4"
+version = "0.2.6"
 edition = "2024"
 description = "Klassisches Screenshot-Werkzeug für Querencia Desktop (grim, slurp, wl-copy)"
-license = "MIT"
+license = "GPL-3.0-or-later"
 publish = false
 
 [dependencies]

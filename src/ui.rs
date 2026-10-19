@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Das Auswahlfenster (Druck, QS-0d): „Was möchten Sie aufnehmen?“ mit
 //! drei Aufnahmearten – ganzer Bildschirm, Fenster einrahmen, Bereich
@@ -198,8 +198,8 @@ pub fn present(application: &gtk::Application) {
     let keys = gtk::EventControllerKey::new();
     {
         let window = window.clone();
-        keys.connect_key_pressed(move |_, key, _, _| {
-            if key == gdk::Key::Escape {
+        keys.connect_key_pressed(move |_, key, _, modifiers| {
+            if closes_chooser(key, modifiers) {
                 window.close();
                 return glib::Propagation::Stop;
             }
@@ -219,6 +219,17 @@ pub fn present(application: &gtk::Application) {
     if let Some(first) = first {
         first.grab_focus();
     }
+}
+
+/// Esc, Strg+W und Strg+Q schließen das Auswahlfenster (wie den Editor).
+fn closes_chooser(key: gdk::Key, modifiers: gdk::ModifierType) -> bool {
+    let control = modifiers
+        & (gdk::ModifierType::CONTROL_MASK
+            | gdk::ModifierType::SHIFT_MASK
+            | gdk::ModifierType::ALT_MASK
+            | gdk::ModifierType::SUPER_MASK)
+        == gdk::ModifierType::CONTROL_MASK;
+    key == gdk::Key::Escape || (control && matches!(key.to_lower(), gdk::Key::w | gdk::Key::q))
 }
 
 /// Große Schaltfläche: Symbol, fette Beschriftung mit Zugriffstaste und eine
@@ -394,6 +405,20 @@ mod tests {
             WindowPlan::Everything,
             "Alt+Druck"
         );
+    }
+
+    #[test]
+    fn escape_ctrl_w_and_ctrl_q_close_the_chooser() {
+        use gdk::{Key, ModifierType as M};
+        assert!(closes_chooser(Key::Escape, M::empty()));
+        assert!(closes_chooser(Key::q, M::CONTROL_MASK));
+        assert!(
+            closes_chooser(Key::W, M::CONTROL_MASK | M::LOCK_MASK),
+            "Feststelltaste"
+        );
+        assert!(!closes_chooser(Key::q, M::empty()));
+        assert!(!closes_chooser(Key::q, M::CONTROL_MASK | M::SHIFT_MASK));
+        assert!(!closes_chooser(Key::b, M::CONTROL_MASK));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! PNG-Daten in die Wayland-Zwischenablage legen (wl-copy, `image/png`).
 

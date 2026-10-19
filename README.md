@@ -27,7 +27,7 @@ Originalgröße, Statuszeile mit Bedienhinweis.
 | Text (klicken, tippen, Eingabetaste; Esc verwirft) | T |
 | Rückgängig / Wiederholen | Strg+Z / Strg+Umschalt+Z, Strg+Y |
 | Speichern … / In Zwischenablage kopieren | Strg+S / Strg+C |
-| Neue Aufnahme / Schließen | Strg+N / Strg+W |
+| Neue Aufnahme / Fenster schließen | Strg+N / Strg+W oder Strg+Q |
 | laufende Zeichnung abbrechen | Esc |
 | Farbpalette öffnen (Pfeiltasten, Eingabe-/Leertaste, Esc) | F |
 
@@ -37,7 +37,11 @@ Standard, Orange, Gelb, Grün, Blau, Violett, Schwarz, Weiß) und
 „Benutzerdefinierte Farbe …“ (kleines Fenster mit dem GTK-Farbwähler,
 Eingabe „#RRGGBB“). Die Farbe gilt für neue Markierungen aller Werkzeuge;
 vorhandene behalten ihre Farbe. Stärken Dünn, Mittel (Standard), Dick. „Alle Markierungen entfernen“ fragt nach und ist rückgängig
-machbar. Ungespeicherte Markierungen lösen beim Schließen eine Abfrage aus.
+machbar. Ungespeicherte Markierungen lösen beim Schließen (Titelleiste,
+Datei → Schließen, Strg+W, Strg+Q) eine Abfrage aus: „Ohne Speichern
+schließen“, „Abbrechen“, „Speichern …“ (wie Querencia Editor). Strg+Q schließt
+nur das eigene Editorfenster, nicht andere offene Aufnahmen; im
+Auswahlfenster schließen Esc, Strg+W und Strg+Q.
 
 Die Aufnahme bleibt unverändert; Markierungen sind eigene Objekte in
 Originalpixeln. Erst Speichern und Kopieren erzeugen daraus ein neues PNG in
@@ -99,5 +103,20 @@ src/clipboard.rs   wl-copy mit image/png
 src/style.css      helle, kompakte, klassische Optik
 ```
 
-Lizenz: MIT (siehe `LICENSE`). Symbole: GNOME Human, wenn installiert und nur GTKs
-Standardthema eingestellt ist (wie Panel und Desktop); Werkzeugsymbole sind gezeichnet.
+Symbole: GNOME Human, wenn installiert und nur GTKs Standardthema eingestellt
+ist (wie Panel und Desktop); Werkzeugsymbole sind gezeichnet. Die MetaInfo für
+Softwarekataloge liegt in `data/org.querencia.Screenshot.metainfo.xml`.
+Änderungen: [CHANGELOG.md](CHANGELOG.md).
+
+## Lizenz
+
+Programm: GPL-3.0-or-later (GNU General Public License, Version 3 oder neuer),
+siehe [LICENSE](LICENSE). Copyright 2026 Querencia Desktop contributors.
+Bis 0.2.4 stand das Programm unter MIT; seit 0.2.6 gilt wie für alle
+Querencia-Programme die GPL. Es enthält keinen fremden Quellcode; die
+Rust-Abhängigkeiten stehen unter eigenen, freizügigen Lizenzen (überwiegend
+MIT/Apache-2.0).
+Die MetaInfo-Daten stehen unter FSFAP.
+
+Name und Logo „Querencia“ sind keine freien Inhalte.
+

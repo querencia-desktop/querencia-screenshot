@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Bildschirmbereiche, wie slurp sie ausgibt und grim sie erwartet
 //! (`x,y wxh` in logischen Pixeln).

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Zeichnen der Markierungen mit cairo – dieselbe Funktion für die Anzeige
 //! im Editor und für das fertige Bild. `compose` führt Originalaufnahme und

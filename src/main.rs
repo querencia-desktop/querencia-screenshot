@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Querencia Screenshot: ein kleines klassisches Aufnahmewerkzeug für
 //! Wayland/labwc auf Basis von grim, slurp und wl-copy.

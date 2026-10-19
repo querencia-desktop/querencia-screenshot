@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Kommandozeile. Ohne Optionen öffnet sich das Auswahlfenster (Druck); mit
 //! einer Aufnahmeoption wird sofort aufgenommen (Alt+Druck: `--window`).

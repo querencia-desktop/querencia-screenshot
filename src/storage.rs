@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Speichern von Aufnahmen: Zielordner, Dateinamen ohne Kollision, private
 //! Dateirechte, nie überschreiben.

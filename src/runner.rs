@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Ausführung externer Programme mit expliziten Argumenten (keine Shell),
 //! hinter einer Schnittstelle, die Tests durch Attrappen ersetzen. Die

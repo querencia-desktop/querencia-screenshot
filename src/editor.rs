@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Bildeditor nach der Aufnahme (QS-0d): große Vorschau, klassische
 //! Menüleiste und Werkzeugleiste, Markierungen (Stift, Kreis/Ellipse,
@@ -381,6 +381,21 @@ fn monitor_size(window: &gtk::ApplicationWindow) -> Option<(f64, f64)> {
 
 // ---------------------------------------------------------------- Aktionen
 
+/// Tastenkürzel der Fensteraktionen. Strg+Q schließt wie Strg+W nur dieses
+/// Fenster (mit derselben Rückfrage bei ungespeicherten Markierungen): Ein
+/// Prozess kann mehrere Editoren haben (Druck bei offenem Editor), und
+/// „Beenden“ soll nicht die Markierungen eines anderen Fensters verwerfen.
+const ACCELS: [(&str, &[&str]); 8] = [
+    ("win.new", &["<Control>n"]),
+    ("win.save", &["<Control>s"]),
+    ("win.copy", &["<Control>c"]),
+    ("win.close", &["<Control>w", "<Control>q"]),
+    ("win.undo", &["<Control>z"]),
+    ("win.redo", &["<Control><Shift>z", "<Control>y"]),
+    ("win.palette", &["f"]),
+    ("win.stroke", &["s"]),
+];
+
 fn upgrade(weak: &Weak<Editor>) -> Option<Rc<Editor>> {
     weak.upgrade()
 }
@@ -486,16 +501,7 @@ fn install_actions(application: &gtk::Application, editor: &Rc<Editor>) {
     });
     window.add_action(&fit);
 
-    for (action, accels) in [
-        ("win.new", &["<Control>n"][..]),
-        ("win.save", &["<Control>s"]),
-        ("win.copy", &["<Control>c"]),
-        ("win.close", &["<Control>w"]),
-        ("win.undo", &["<Control>z"]),
-        ("win.redo", &["<Control><Shift>z", "<Control>y"]),
-        ("win.palette", &["f"]),
-        ("win.stroke", &["s"]),
-    ] {
+    for (action, accels) in ACCELS {
         application.set_accels_for_action(action, accels);
     }
     for tool in Tool::ALL {
@@ -1583,8 +1589,9 @@ fn connect_close(editor: &Rc<Editor>) {
                 message: "Änderungen nicht gespeichert",
                 detail: "Die Markierungen wurden seit dem letzten Speichern geändert oder noch nie gespeichert. Beim Schließen gehen diese Änderungen verloren.",
                 icon: &["dialog-warning"],
-                buttons: &["_Abbrechen", "_Ohne Speichern schließen", "_Speichern …"],
-                cancel: 0,
+                // Reihenfolge wie Querencia Editor (gedit 2.30).
+                buttons: &["_Ohne Speichern schließen", "_Abbrechen", "_Speichern …"],
+                cancel: 1,
                 default: 2,
             },
             move |answer| {
@@ -1592,7 +1599,7 @@ fn connect_close(editor: &Rc<Editor>) {
                     return;
                 };
                 match answer {
-                    1 => {
+                    0 => {
                         println!("querencia-screenshot: ohne Speichern geschlossen");
                         editor.force_close.set(true);
                         editor.window.close();
@@ -1803,6 +1810,31 @@ mod tests {
         let view = View::compute(false, (1000.0, 700.0), image);
         assert_eq!((view.scale, view.ox, view.oy), (1.0, MARGIN, MARGIN));
         assert_eq!(view.to_image(112.0, 62.0, image), Point::new(100.0, 50.0));
+    }
+
+    #[test]
+    fn close_has_ctrl_w_and_ctrl_q_and_all_accels_parse() {
+        let close = ACCELS
+            .iter()
+            .find(|(action, _)| *action == "win.close")
+            .map(|(_, accels)| *accels);
+        assert_eq!(close, Some(&["<Control>w", "<Control>q"][..]));
+        // Ohne Display: Modifikatoren abziehen, der Rest muss ein Tastenname sein
+        // (gtk::accelerator_parse bräuchte ein initialisiertes GTK).
+        for (action, accels) in ACCELS {
+            for accel in accels {
+                let key = accel.replace("<Control>", "").replace("<Shift>", "");
+                assert!(
+                    !key.contains('<') && gdk::Key::from_name(&key).is_some(),
+                    "{action}: {accel} ist kein Kürzel"
+                );
+            }
+        }
+        let mut all: Vec<_> = ACCELS.iter().flat_map(|(_, accels)| *accels).collect();
+        let count = all.len();
+        all.sort_unstable();
+        all.dedup();
+        assert_eq!(all.len(), count, "kein Kürzel doppelt belegt");
     }
 
     #[test]

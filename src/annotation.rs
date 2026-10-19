@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Markierungen auf einer Aufnahme (QS-0d): Werkzeuge, Farben, Stärken und
 //! die Liste der Markierungen mit Rückgängig/Wiederholen.

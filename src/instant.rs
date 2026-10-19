@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Sofortaufnahme (`--screen`, `--window`, `--area`): ohne vorherige
 //! Moduswahl aufnehmen und das Ergebnis im Editor öffnen (QS-0d; bis QS-1
