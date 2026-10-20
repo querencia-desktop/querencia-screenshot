@@ -154,9 +154,26 @@ pub fn present(application: &gtk::Application) {
         .into_iter()
         .find(|window| window.has_css_class(CHOOSER_CLASS))
     {
-        window.present();
+        // Während einer Aufnahme ist das Auswahlfenster verborgen und kommt
+        // danach neu gebaut zurück (`run_capture`). Hier wieder gezeigt,
+        // stünde es im Bild und hätte keine Titelleiste (QD-076).
+        if window.is_visible() {
+            window.present();
+        }
         return;
     }
+    build_chooser(application, None);
+}
+
+/// Baut das Auswahlfenster und zeigt es. `message` ersetzt den Hinweis
+/// unter den Schaltflächen (Abbruch oder Fehler der vorigen Aufnahme).
+///
+/// Ein verborgenes und wieder gezeigtes GTK-4.22-Fenster hat in labwc 0.9.8
+/// keine Titelleiste mehr: labwc verknüpft die Serverdekoration nur mit dem
+/// ersten xdg_toplevel einer Fläche (QD-076, `kde-deco.c`). Deshalb wird
+/// das Fenster nach einem Abbruch neu gebaut statt wieder gezeigt (Muster
+/// Querencia Bilder 0.2.3).
+fn build_chooser(application: &gtk::Application, message: Option<&str>) {
     let window = gtk::ApplicationWindow::builder()
         .application(application)
         .title("Querencia Screenshot")
@@ -235,6 +252,9 @@ pub fn present(application: &gtk::Application) {
             "Missing programs: {programs}. Window and area need slurp, copying needs wl-copy (package wl-clipboard).",
             &[("programs", &missing.join(", "))],
         ));
+    }
+    if let Some(message) = message {
+        state.status.set_text(message);
     }
     window.present();
     if let Some(first) = first {
@@ -371,9 +391,13 @@ fn run_capture(state: Rc<State>, target: Target) {
             }
             Err(_) => gettext("The capture ended unexpectedly."),
         };
-        state.window.set_visible(true);
-        state.window.present();
-        state.status.set_text(&message);
+        // Neu bauen statt wieder zeigen (QD-076, siehe `build_chooser`);
+        // erst danach das verborgene Fenster schließen, damit die Anwendung
+        // nie ohne Fenster ist.
+        if let Some(application) = state.window.application() {
+            build_chooser(&application, Some(&message));
+        }
+        state.window.close();
     });
 }
 
