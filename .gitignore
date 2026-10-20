@@ -2,3 +2,4 @@
 # Vorlage der Integration 0.2.7: Binary und Katalog nicht ins Repo
 /integration/vorschlag-027/querencia-screenshot
 /integration/vorschlag-027/share/
+__pycache__/
