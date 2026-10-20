@@ -4,6 +4,29 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen
 nach [Semantic Versioning](https://semver.org/lang/de/). Solange die Hauptversion
 0 ist, kann sich alles ändern. Jede Zeile nennt, was Nutzer merken.
 
+## [0.2.8] – 2026-10-20
+
+0.2.7 + Fensterwahl aus 0.2.5 (Zweig `fensterwahl`, ADR-004 „so
+übernehmen“: beide Benutzerpfade, Ziehverhalten Option 1, kein Umschalter).
+
+### Hinzugefügt
+- **Fensterwahl** (Alt+Druck und „Fenster einrahmen“): Der Bildschirm wird
+  eingefroren, Fenster mit labwc-Rahmen werden im Bild erkannt und beim
+  Darüberfahren hervorgehoben; ein Klick nimmt das Fenster samt Titelleiste
+  und Rahmen auf. Außerhalb erkannter Fenster wird mit gedrückter Maustaste
+  frei eingerahmt, Esc bricht ab. Ein Zug, der in einem erkannten Fenster
+  beginnt, wählt dieses Fenster; Fensterteile über „Bereich auswählen“.
+
+### Geändert
+- Kürzel im Menü in der Sprache der Oberfläche: „Strg+N“ statt „Ctrl+N“ im
+  Deutschen (GTKs eigener Katalog fehlt auf Querencia).
+- Ein angefangener, noch nicht mit Eingabe übernommener Text zählt beim
+  Schließen als ungespeicherte Änderung (Rückfrage); „Speichern …“ übernimmt
+  ihn vorher ins Bild.
+- Strg+W und Strg+Q schließen den Editor auch während der Texteingabe
+  (bisher behielt das Eingabefeld die Kürzel, nur das X schloss).
+- MetaInfo: Version 0.2.8 mit Beschreibung.
+
 ## [0.2.7] – 2026-10-20
 
 Ab `main` (0.2.6). Die Fensterwahl aus 0.2.5 (Zweig `fensterwahl`) ist

@@ -244,13 +244,19 @@ pub fn present(application: &gtk::Application) {
 
 /// Esc, Strg+W und Strg+Q schließen das Auswahlfenster (wie den Editor).
 fn closes_chooser(key: gdk::Key, modifiers: gdk::ModifierType) -> bool {
+    key == gdk::Key::Escape || close_shortcut(key, modifiers)
+}
+
+/// Strg+W oder Strg+Q (Feststell- und NumLock egal, keine weitere
+/// Zusatztaste) – die Schließkürzel von Editor und Auswahlfenster.
+pub fn close_shortcut(key: gdk::Key, modifiers: gdk::ModifierType) -> bool {
     let control = modifiers
         & (gdk::ModifierType::CONTROL_MASK
             | gdk::ModifierType::SHIFT_MASK
             | gdk::ModifierType::ALT_MASK
             | gdk::ModifierType::SUPER_MASK)
         == gdk::ModifierType::CONTROL_MASK;
-    key == gdk::Key::Escape || (control && matches!(key.to_lower(), gdk::Key::w | gdk::Key::q))
+    control && matches!(key.to_lower(), gdk::Key::w | gdk::Key::q)
 }
 
 /// Große Schaltfläche: Symbol, fette Beschriftung mit Zugriffstaste und eine

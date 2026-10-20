@@ -37,7 +37,8 @@ Standard, Orange, Gelb, Grün, Blau, Violett, Schwarz, Weiß) und
 „Benutzerdefinierte Farbe …“ (kleines Fenster mit dem GTK-Farbwähler,
 Eingabe „#RRGGBB“). Die Farbe gilt für neue Markierungen aller Werkzeuge;
 vorhandene behalten ihre Farbe. Stärken Dünn, Mittel (Standard), Dick. „Alle Markierungen entfernen“ fragt nach und ist rückgängig
-machbar. Ungespeicherte Markierungen lösen beim Schließen (Titelleiste,
+machbar. Ungespeicherte Markierungen – auch ein angefangener, noch nicht mit
+Eingabe übernommener Text – lösen beim Schließen (Titelleiste,
 Datei → Schließen, Strg+W, Strg+Q) eine Abfrage aus: „Ohne Speichern
 schließen“, „Abbrechen“, „Speichern …“ (wie Querencia Editor). Strg+Q schließt
 nur das eigene Editorfenster, nicht andere offene Aufnahmen; im
@@ -90,6 +91,10 @@ Oberfläche.
 - Kataloge `<lang>/LC_MESSAGES/querencia-screenshot.mo`: zuerst
   `<Ordner der Binary>/share/locale`, dann `<Ordner der Binary>/../share/locale`,
   zuletzt `/usr/share/locale`; `QUERENCIA_SCREENSHOT_LOCALEDIR` setzt den Ordner.
+- Kürzel im Menü in der Sprache der Oberfläche („Strg+N“ / „Ctrl+N“): GTK
+  beschriftet sie über seinen eigenen Katalog (gtk40), der auf Querencia
+  fehlt; das Programm ersetzt die Tastennamen deshalb beim Öffnen eines Menüs
+  über den eigenen Katalog (Kontext `keyboard label`, seit 0.2.8).
 - Zugriffstasten je Sprache: deutsch wie bisher (Alt+N/O/Z/A/S im
   Speicherdialog), englisch nach GNOME 2 (Alt+N/F/L/C/S).
 - po-Pflege mit `werkzeug/i18n.py` (`pot`, `update`, `desktop`, `mo <ziel>`,

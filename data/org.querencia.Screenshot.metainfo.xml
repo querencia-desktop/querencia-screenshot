@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Querencia Screenshot 0.2.7 (deutsch/englisch über gettext; MetaInfo zweisprachig von Hand). Lizenz GPL-3.0-or-later nach LICENSE (bis 0.2.4 MIT). Menüname „Bildschirmfoto aufnehmen“, der Komponentenname ist der Programmname.
+<!-- Querencia Screenshot 0.2.8 (Fensterwahl; deutsch/englisch über gettext; MetaInfo zweisprachig von Hand). Lizenz GPL-3.0-or-later nach LICENSE (bis 0.2.4 MIT). Menüname „Bildschirmfoto aufnehmen“, der Komponentenname ist der Programmname.
      Abgeleitet von der Fassung aus querencia-software-paket/werkzeug/metainfo-erzeugen.py (SW-5, Querencia Software, 2026-10-18);
      Metadaten unter FSFAP, damit Kataloge sie frei übernehmen dürfen. -->
 <component type="desktop-application">
@@ -45,6 +45,12 @@
     <color type="primary" scheme_preference="dark">#B8532B</color>
   </branding>
   <releases>
+    <release version="0.2.8" date="2026-10-20">
+      <description>
+        <p>Window selection: detected windows are highlighted under the pointer and captured with a click; dragging outside them frames freely. Menu shortcuts in the language of the interface; text that is still being typed counts as an unsaved change.</p>
+        <p xml:lang="de">Fensterwahl: erkannte Fenster werden unter dem Mauszeiger hervorgehoben und per Klick aufgenommen; außerhalb davon wird frei eingerahmt. Menükürzel in der Sprache der Oberfläche; ein angefangener Text zählt als ungespeicherte Änderung.</p>
+      </description>
+    </release>
     <release version="0.2.7" date="2026-10-20"/>
     <release version="0.2.6" date="2026-10-19"/>
     <release version="0.2.4" date="2026-10-18"/>

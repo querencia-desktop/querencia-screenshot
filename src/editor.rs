@@ -251,6 +251,13 @@ impl Editor {
         }
     }
 
+    /// Ein angefangener, noch nicht mit Eingabe übernommener Text, so wie er
+    /// beim Übernehmen zur Markierung würde.
+    fn pending_text(&self) -> Option<Mark> {
+        let at = self.text_at.get()?;
+        Some(self.new_mark(Shape::Text(at, self.entry.text().to_string())))
+    }
+
     fn compose(&self) -> Result<Png, render::RenderError> {
         render::compose(&self.original, self.marks.borrow().items())
     }
@@ -603,7 +610,62 @@ fn menu_bar() -> gtk::PopoverMenuBar {
 
     let bar = gtk::PopoverMenuBar::from_model(Some(&menu));
     bar.add_css_class("qs-menubar");
+    each_descendant(bar.upcast_ref(), &mut |widget| {
+        if let Some(popover) = widget.downcast_ref::<gtk::PopoverMenu>() {
+            popover.connect_map(|popover| translate_accel_labels(popover.upcast_ref()));
+        }
+    });
     bar
+}
+
+/// Kürzel im Menü in der Sprache der Oberfläche. GTK beschriftet sie selbst
+/// (`gtk_accelerator_get_label`, Textdomäne gtk40); ohne deren deutschen
+/// Katalog – auf Querencia nicht installiert – stünde dort „Ctrl+N“. Beim
+/// Öffnen eines Menüs ersetzt das Programm deshalb die Tastennamen über den
+/// eigenen Katalog; die Beschriftungen sind dann gesetzt, auch wenn die
+/// Kürzel erst nach dem Menü vergeben wurden.
+fn translate_accel_labels(popover: &gtk::Widget) {
+    each_descendant(popover, &mut |widget| {
+        if widget.css_name() != "accelerator" {
+            return;
+        }
+        if let Some(label) = widget.downcast_ref::<gtk::Label>() {
+            let text = label.label();
+            let translated = accel_label(&text, key_name);
+            if translated != text.as_str() {
+                label.set_label(&translated);
+            }
+        }
+    });
+}
+
+fn each_descendant(widget: &gtk::Widget, visit: &mut dyn FnMut(&gtk::Widget)) {
+    let mut child = widget.first_child();
+    while let Some(current) = child {
+        visit(&current);
+        each_descendant(&current, visit);
+        child = current.next_sibling();
+    }
+}
+
+/// „Shift+Ctrl+Z“ → „Umschalt+Strg+Z“; nur die Namen der Zusatztasten
+/// werden ersetzt, die Taste selbst bleibt. Schon übersetzte Namen sind
+/// keine englischen Namen mehr, ein zweiter Durchlauf ändert nichts.
+fn accel_label(text: &str, name: impl Fn(&str) -> Option<String>) -> String {
+    text.split('+')
+        .map(|part| name(part).unwrap_or_else(|| part.to_owned()))
+        .collect::<Vec<_>>()
+        .join("+")
+}
+
+fn key_name(english: &str) -> Option<String> {
+    Some(match english {
+        // TRANSLATORS: Name der Taste in Menükürzeln (wie GTK, „Strg+N“).
+        "Ctrl" => pgettext("keyboard label", "Ctrl"),
+        // TRANSLATORS: Name der Taste in Menükürzeln (wie GTK, „Umschalt+Strg+Z“).
+        "Shift" => pgettext("keyboard label", "Shift"),
+        _ => return None,
+    })
 }
 
 // ---------------------------------------------------------- Werkzeugleiste
@@ -1567,11 +1629,19 @@ fn connect_text(editor: &Rc<Editor>) {
     let keys = gtk::EventControllerKey::new();
     keys.set_propagation_phase(gtk::PropagationPhase::Capture);
     let weak = Rc::downgrade(editor);
-    keys.connect_key_pressed(move |_, key, _, _| {
-        if key == gdk::Key::Escape
-            && let Some(editor) = upgrade(&weak)
-        {
+    keys.connect_key_pressed(move |_, key, _, modifiers| {
+        let Some(editor) = upgrade(&weak) else {
+            return glib::Propagation::Proceed;
+        };
+        if key == gdk::Key::Escape {
             finish_text(&editor, false);
+            return glib::Propagation::Stop;
+        }
+        // Das Textfeld behielte Strg+W/Strg+Q für sich (die Kürzel der
+        // Anwendung kamen während der Eingabe nie an); Schließen geht auch
+        // hier, mit Rückfrage für den angefangenen Text.
+        if ui::close_shortcut(key, modifiers) {
+            editor.window.close();
             return glib::Propagation::Stop;
         }
         glib::Propagation::Proceed
@@ -1608,9 +1678,15 @@ fn connect_close(editor: &Rc<Editor>) {
         let Some(editor) = upgrade(&weak) else {
             return glib::Propagation::Proceed;
         };
-        if editor.force_close.get() || !editor.marks.borrow().has_unsaved_marks() {
+        let pending = editor.pending_text();
+        if editor.force_close.get()
+            || !needs_close_question(&editor.marks.borrow(), pending.as_ref())
+        {
             println!("querencia-screenshot: Editor geschlossen");
             return glib::Propagation::Proceed;
+        }
+        if pending.as_ref().is_some_and(Mark::is_meaningful) {
+            println!("querencia-screenshot: angefangener Text noch nicht übernommen");
         }
         let weak = Rc::downgrade(&editor);
         let message = gettext("Changes are not saved");
@@ -1648,15 +1724,32 @@ fn connect_close(editor: &Rc<Editor>) {
                         editor.window.close();
                     }
                     2 => {
+                        // Der angefangene Text kommt mit ins Bild.
+                        finish_text(&editor, true);
                         editor.close_after_save.set(true);
                         save(&editor);
                     }
-                    _ => editor.say(&gettext("Closing cancelled")),
+                    _ => {
+                        editor.say(&gettext("Closing cancelled"));
+                        // Weiterschreiben, ohne den Text zu markieren (sonst
+                        // ersetzte die nächste Taste ihn).
+                        if editor.text_at.get().is_some() {
+                            editor.entry.grab_focus_without_selecting();
+                            editor.entry.set_position(-1);
+                        }
+                    }
                 }
             },
         );
         glib::Propagation::Stop
     });
+}
+
+/// Schließen fragt nach, wenn Markierungen seit dem letzten Speichern
+/// geändert sind oder ein angefangener Text eine Markierung ergäbe
+/// (QREL-05-Folgepunkt, 0.2.8). Ein leeres Textfeld verliert nichts.
+fn needs_close_question(marks: &Marks, pending: Option<&Mark>) -> bool {
+    marks.has_unsaved_marks() || pending.is_some_and(Mark::is_meaningful)
 }
 
 fn confirm_clear(editor: &Rc<Editor>) {
@@ -1893,6 +1986,45 @@ mod tests {
         all.sort_unstable();
         all.dedup();
         assert_eq!(all.len(), count, "kein Kürzel doppelt belegt");
+    }
+
+    #[test]
+    fn started_text_counts_as_unsaved_but_an_empty_field_does_not() {
+        let text = |text: &str| Mark {
+            shape: Shape::Text(Point::new(10.0, 20.0), text.to_owned()),
+            color: Color::RED,
+            width: Width::MEDIUM,
+        };
+        let mut marks = Marks::default();
+        assert!(!needs_close_question(&marks, None));
+        assert!(!needs_close_question(&marks, Some(&text(""))));
+        assert!(!needs_close_question(&marks, Some(&text("  "))));
+        assert!(needs_close_question(&marks, Some(&text("Hallo"))));
+        assert!(marks.add(text("fertig")));
+        assert!(needs_close_question(&marks, None));
+        marks.mark_saved();
+        assert!(!needs_close_question(&marks, None));
+        assert!(needs_close_question(&marks, Some(&text("noch einer"))));
+    }
+
+    #[test]
+    fn accel_labels_replace_only_modifier_names() {
+        let german = |name: &str| match name {
+            "Ctrl" => Some("Strg".to_owned()),
+            "Shift" => Some("Umschalt".to_owned()),
+            _ => None,
+        };
+        assert_eq!(accel_label("Ctrl+N", german), "Strg+N");
+        assert_eq!(accel_label("Shift+Ctrl+Z", german), "Umschalt+Strg+Z");
+        assert_eq!(accel_label("S", german), "S");
+        assert_eq!(accel_label("Ctrl++", german), "Strg++");
+        assert_eq!(
+            accel_label("Strg+N", german),
+            "Strg+N",
+            "zweimal ändert nichts"
+        );
+        // Ohne Katalog (Englisch) bleibt alles, wie GTK es schreibt.
+        assert_eq!(accel_label("Shift+Ctrl+Z", key_name), "Shift+Ctrl+Z");
     }
 
     #[test]
