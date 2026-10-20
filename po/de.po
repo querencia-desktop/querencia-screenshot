@@ -144,7 +144,7 @@ msgstr "Die Aufnahme ist fehlgeschlagen (Status {status})"
 msgid "The capture failed: {message}"
 msgstr "Die Aufnahme ist fehlgeschlagen: {message}"
 
-#: src/capture.rs:106
+#: src/capture.rs:147
 #, no-c-format
 msgid "invalid output name {name}"
 msgstr "ungültiger Ausgabename {name}"
@@ -226,7 +226,7 @@ msgstr "_Neue Aufnahme"
 msgid "_Save…"
 msgstr "_Speichern …"
 
-#: src/editor.rs:549 src/instant.rs:461
+#: src/editor.rs:549 src/instant.rs:720
 msgid "Copy to C_lipboard"
 msgstr "In die _Zwischenablage kopieren"
 
@@ -386,7 +386,7 @@ msgstr ""
 msgid "Close _without Saving"
 msgstr "_Ohne Speichern schließen"
 
-#: src/editor.rs:1624 src/editor.rs:1669 src/instant.rs:464 src/instant.rs:643
+#: src/editor.rs:1624 src/editor.rs:1669 src/instant.rs:723 src/instant.rs:902
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
@@ -444,7 +444,7 @@ msgstr ""
 msgid "Cannot copy: wl-copy is missing"
 msgstr "Kopieren nicht möglich: wl-copy fehlt"
 
-#: src/editor.rs:1791 src/instant.rs:589
+#: src/editor.rs:1791 src/instant.rs:848
 msgid "Copying to the clipboard…"
 msgstr "Kopiere in die Zwischenablage …"
 
@@ -473,152 +473,187 @@ msgstr "Ungültige Geometrie: {text}"
 msgid "Invalid size: {width}×{height} pixels"
 msgstr "Ungültige Größe: {width}×{height} Pixel"
 
-#: src/instant.rs:59
+#: src/instant.rs:72
 msgid "Screen"
 msgstr "Bildschirm"
 
-#: src/instant.rs:60
+#: src/instant.rs:73
 msgid "Area"
 msgstr "Bereich"
 
 #. TRANSLATORS: {output} ist der Name des Bildschirms (z. B. HDMI-A-1).
-#: src/instant.rs:66
+#: src/instant.rs:81
 #, no-c-format
 msgid "Window “{title}” (full screen on {output})"
 msgstr "Fenster „{title}“ (Vollbild auf {output})"
 
-#: src/instant.rs:75
-#, no-c-format
-msgid ""
-"Window “{title}”, framed with the mouse (labwc reports no window borders)"
-msgstr ""
-"Fenster „{title}“, mit der Maus eingerahmt (labwc meldet keine Fenstergrenzen)"
-
-#: src/instant.rs:79
-msgid ""
-"Window, framed with the mouse (the active window could not be determined)"
-msgstr "Fenster, mit der Maus eingerahmt (aktives Fenster nicht ermittelbar)"
-
-#: src/instant.rs:82
+#: src/instant.rs:89
 msgid "No active window – whole screen"
 msgstr "Kein aktives Fenster – ganzer Bildschirm"
 
-#: src/instant.rs:117 src/ui.rs:362
+#. TRANSLATORS: {area} ist das Rechteck „x,y BxH“ in Bildschirmpixeln.
+#: src/instant.rs:185
+#, no-c-format
+msgid "Window “{title}”, framed with the mouse ({area})"
+msgstr "Fenster „{title}“, mit der Maus eingerahmt ({area})"
+
+#: src/instant.rs:192
+#, no-c-format
+msgid "Window, framed with the mouse ({area})"
+msgstr "Fenster, mit der Maus eingerahmt ({area})"
+
+#. TRANSLATORS: {area} ist das Rechteck „x,y BxH“ in Bildschirmpixeln.
+#: src/instant.rs:289
+#, no-c-format
+msgid "Window “{title}” (selected {area})"
+msgstr "Fenster „{title}“ (gewählt {area})"
+
+#. TRANSLATORS: „partly covered“: darüberliegende Fenster sind mit im Bild.
+#: src/instant.rs:290
+#, no-c-format
+msgid ""
+"Window “{title}” (selected {area}, partly covered – windows on top are in the picture)"
+msgstr ""
+"Fenster „{title}“ (gewählt {area}, teilweise verdeckt – darüberliegende Fenster sind mit im Bild)"
+
+#: src/instant.rs:296
+#, no-c-format
+msgid "Window “{title}” (selected {area}, maximized)"
+msgstr "Fenster „{title}“ (gewählt {area}, maximiert)"
+
+#: src/instant.rs:298
+#, no-c-format
+msgid "Window (selected {area})"
+msgstr "Fenster (gewählt {area})"
+
+#: src/instant.rs:299
+#, no-c-format
+msgid ""
+"Window (selected {area}, partly covered – windows on top are in the picture)"
+msgstr ""
+"Fenster (gewählt {area}, teilweise verdeckt – darüberliegende Fenster sind mit im Bild)"
+
+#: src/instant.rs:303
+#, no-c-format
+msgid "Window (selected {area}, maximized)"
+msgstr "Fenster (gewählt {area}, maximiert)"
+
+#: src/instant.rs:312 src/render.rs:30
+#, no-c-format
+msgid "Cannot read the picture: {error}"
+msgstr "Bild kann nicht gelesen werden: {error}"
+
+#: src/instant.rs:376 src/ui.rs:366
 msgid "The capture ended unexpectedly."
 msgstr "Die Aufnahme wurde unerwartet beendet."
 
-#: src/instant.rs:245
+#: src/instant.rs:504
 msgid "Screenshot Failed"
 msgstr "Bildschirmfoto fehlgeschlagen"
 
-#: src/instant.rs:257
+#: src/instant.rs:516
 msgid "Close"
 msgstr "Schließen"
 
-#: src/instant.rs:299
+#: src/instant.rs:558
 #, no-c-format
 msgid "“{path}” is not a folder – please choose another folder."
 msgstr "„{path}“ ist kein Ordner – bitte einen anderen Ordner wählen."
 
-#: src/instant.rs:305
+#: src/instant.rs:564
 #, no-c-format
 msgid "No permission to write to “{path}” – please choose another folder."
 msgstr ""
 "Keine Schreibberechtigung für „{path}“ – bitte einen anderen Ordner wählen."
 
-#: src/instant.rs:318
+#: src/instant.rs:577
 #, no-c-format
 msgid ""
 "“{path}” is missing and cannot be created – please choose another folder."
 msgstr ""
 "„{path}“ fehlt und kann nicht angelegt werden – bitte einen anderen Ordner wählen."
 
-#: src/instant.rs:378
+#: src/instant.rs:637
 msgid "Save Screenshot"
 msgstr "Bildschirmfoto speichern"
 
-#: src/instant.rs:405
+#: src/instant.rs:664
 #, no-c-format
 msgid "{width} × {height} pixels"
 msgstr "{width} × {height} Pixel"
 
-#: src/instant.rs:410
+#: src/instant.rs:669
 msgid "unknown size"
 msgstr "unbekannte Größe"
 
 #. TRANSLATORS: Speicherdialog. Zugriffstasten von „_Name:“, „Save in _folder:“, „Copy to C_lipboard“, „_Cancel“, „_Save“ verschieden halten.
-#: src/instant.rs:423
+#: src/instant.rs:682
 msgid "_Name:"
 msgstr "_Name:"
 
-#: src/instant.rs:433
+#: src/instant.rs:692
 msgid "Save in _folder:"
 msgstr "In _Ordner speichern:"
 
-#: src/instant.rs:446
+#: src/instant.rs:705
 msgid "Choose another folder…"
 msgstr "Anderen Ordner wählen …"
 
-#: src/instant.rs:468
+#: src/instant.rs:727
 msgid "_Save"
 msgstr "_Speichern"
 
-#: src/instant.rs:575
+#: src/instant.rs:834
 msgid ""
 "Copied through GTK (wl-copy is missing): valid only while this window stays open."
 msgstr ""
 "Kopiert über GTK (wl-copy fehlt): gilt nur, solange dieses Fenster offen bleibt."
 
-#: src/instant.rs:581
+#: src/instant.rs:840
 msgid "Cannot copy: wl-copy is missing."
 msgstr "Kopieren nicht möglich: wl-copy fehlt."
 
-#: src/instant.rs:601
+#: src/instant.rs:860
 msgid "Copied to the clipboard (image/png)."
 msgstr "In die Zwischenablage kopiert (image/png)."
 
-#: src/instant.rs:606
+#: src/instant.rs:865
 msgid "_Close"
 msgstr "_Schließen"
 
-#: src/instant.rs:611
+#: src/instant.rs:870
 msgid "Copying ended unexpectedly."
 msgstr "Kopieren wurde unerwartet beendet."
 
-#: src/instant.rs:635
+#: src/instant.rs:894
 msgid "Choose a Folder for the Screenshot"
 msgstr "Ordner für das Bildschirmfoto wählen"
 
 #. TRANSLATORS: Knopf im Ordnerdialog.
-#: src/instant.rs:645
+#: src/instant.rs:904
 msgid "_Select"
 msgstr "_Auswählen"
 
-#: src/instant.rs:674
+#: src/instant.rs:933
 msgid "Only local folders are supported."
 msgstr "Nur lokale Ordner werden unterstützt."
 
-#: src/main.rs:92
+#: src/main.rs:93
 #, no-c-format
 msgid "Cannot read “{path}”: {error}"
 msgstr "„{path}“ kann nicht gelesen werden: {error}"
 
 #. TRANSLATORS: Datei und Grund, z. B. „“a.png”: The capture is not a PNG image“.
-#: src/main.rs:102
+#: src/main.rs:103
 #, no-c-format
 msgid "“{path}”: {error}"
 msgstr "„{path}“: {error}"
 
 #. TRANSLATORS: Beschreibung einer geöffneten Datei (Speicherdialog).
-#: src/main.rs:117
+#: src/main.rs:118
 #, no-c-format
 msgid "File “{name}”"
 msgstr "Datei „{name}“"
-
-#: src/render.rs:30
-#, no-c-format
-msgid "Cannot read the picture: {error}"
-msgstr "Bild kann nicht gelesen werden: {error}"
 
 #: src/render.rs:35
 #, no-c-format
@@ -723,7 +758,7 @@ msgid "the name is too long (at most 255 bytes)"
 msgstr "der Name ist zu lang (höchstens 255 Byte)"
 
 #. TRANSLATORS: Fenster ohne Titel und App-ID, steht in „Window “{title}” …“.
-#: src/toplevel.rs:49
+#: src/toplevel.rs:67
 msgid "untitled"
 msgstr "ohne Titel"
 
@@ -743,9 +778,9 @@ msgstr "_Fenster einrahmen"
 
 #: src/ui.rs:82
 msgid ""
-"Frame the window with the mouse: labwc reports no window borders, so there is no automatic window detection. A full-screen window is captured directly."
+"Click a window: detected windows are highlighted when the pointer moves over them. Frame other windows with the mouse. A full-screen window is captured directly."
 msgstr ""
-"Das Fenster mit der Maus einrahmen: labwc meldet keine Fenstergrenzen, eine automatische Fenstererkennung gibt es deshalb nicht. Ein Vollbildfenster wird direkt aufgenommen."
+"Fenster anklicken: erkannte Fenster werden beim Darüberfahren hervorgehoben. Andere Fenster mit der Maus einrahmen. Ein Vollbildfenster wird direkt aufgenommen."
 
 #: src/ui.rs:89
 msgid "Select an _area"
@@ -771,6 +806,6 @@ msgid ""
 msgstr ""
 "Fehlende Programme: {programs}. Fenster und Bereich brauchen slurp, Kopieren braucht wl-copy (Paket wl-clipboard)."
 
-#: src/ui.rs:356
+#: src/ui.rs:360
 msgid "Cancelled – nothing captured."
 msgstr "Abgebrochen – keine Aufnahme."

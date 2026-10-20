@@ -80,8 +80,8 @@ impl Choice {
             Target::Window => (
                 gettext("_Frame a window"),
                 gettext(
-                    "Frame the window with the mouse: labwc reports no window borders, \
-                     so there is no automatic window detection. \
+                    "Click a window: detected windows are highlighted when the pointer \
+                     moves over them. Frame other windows with the mouse. \
                      A full-screen window is captured directly.",
                 ),
             ),
@@ -286,8 +286,12 @@ fn choice_button(choice: &Choice) -> gtk::Button {
 /// Im Auswahlfenster hat der Benutzer „Fenster einrahmen“ ausdrücklich
 /// gewählt: Ohne aktives Fenster wird trotzdem eingerahmt, nicht (wie bei
 /// Alt+Druck nach GNOME 2) der ganze Bildschirm genommen.
-fn chooser_window_query() -> toplevel::WindowQuery {
-    window_query_for_chooser(toplevel::query_active())
+fn chooser_desktop() -> toplevel::Desktop {
+    let desktop = toplevel::query_desktop();
+    toplevel::Desktop {
+        query: window_query_for_chooser(desktop.query.clone()),
+        ..desktop
+    }
 }
 
 fn window_query_for_chooser(query: toplevel::WindowQuery) -> toplevel::WindowQuery {
@@ -324,7 +328,7 @@ fn begin_capture(state: &Rc<State>, target: Target) {
 fn run_capture(state: Rc<State>, target: Target) {
     glib::spawn_future_local(async move {
         let outcome = gio::spawn_blocking(move || {
-            instant::perform(&runner::SystemRunner, target, chooser_window_query)
+            instant::perform(&runner::SystemRunner, target, chooser_desktop)
         })
         .await;
         *state.busy.borrow_mut() = false;

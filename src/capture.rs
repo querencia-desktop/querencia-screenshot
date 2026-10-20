@@ -82,6 +82,47 @@ pub fn select_region(runner: &dyn CommandRunner) -> Result<Option<Region>, Captu
         .map_err(CaptureError::Geometry)
 }
 
+/// Ergebnis der Fensterwahl mit slurp.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Picked {
+    pub region: Region,
+    /// Kennung des angeklickten vorgegebenen Rechtecks; `None`, wenn frei
+    /// aufgezogen wurde.
+    pub label: Option<String>,
+}
+
+/// slurp mit vorgegebenen Rechtecken (`x,y wxh label` je Zeile auf stdin,
+/// **ohne** `-r`): Darüberfahren hebt ein Rechteck hervor, Klick wählt es,
+/// Ziehen rahmt weiterhin frei ein. `Ok(None)`: Abbruch (Esc).
+pub fn pick_region(
+    runner: &dyn CommandRunner,
+    boxes: &[(Region, String)],
+) -> Result<Option<Picked>, CaptureError> {
+    let mut input = String::new();
+    for (region, label) in boxes {
+        input.push_str(&format!("{} {label}\n", region.grim_argument()));
+    }
+    let output = runner.run(SLURP, &["-f", "%x,%y %wx%h;%l"], Some(input.as_bytes()))?;
+    if !output.success() {
+        if output.status == 1 && slurp_cancelled(&output.stderr) {
+            return Ok(None);
+        }
+        return Err(CaptureError::Failed {
+            status: output.status,
+            stderr: output.stderr,
+        });
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let text = text.trim();
+    let (geometry, label) = text.split_once(';').unwrap_or((text, ""));
+    let region = Region::parse(geometry).map_err(CaptureError::Geometry)?;
+    let label = label.trim();
+    Ok(Some(Picked {
+        region,
+        label: (!label.is_empty()).then(|| label.to_owned()),
+    }))
+}
+
 fn slurp_cancelled(stderr: &str) -> bool {
     stderr.to_ascii_lowercase().contains("cancel")
 }
@@ -296,6 +337,51 @@ mod tests {
             degenerate.calls.borrow().is_empty(),
             "grim wird bei ungültiger Geometrie nicht gestartet"
         );
+    }
+
+    #[test]
+    fn picking_passes_boxes_on_stdin_and_reads_the_label() {
+        let boxes = vec![
+            (
+                Region {
+                    x: 100,
+                    y: 80,
+                    width: 500,
+                    height: 366,
+                },
+                "f0".to_owned(),
+            ),
+            (
+                Region {
+                    x: -20,
+                    y: 5,
+                    width: 30,
+                    height: 40,
+                },
+                "f1".to_owned(),
+            ),
+        ];
+        let runner = FakeRunner::default().respond(SLURP, exit(0, b"100,80 500x366;f0\n", ""));
+        let picked = pick_region(&runner, &boxes).expect("ok").expect("picked");
+        assert_eq!(picked.label.as_deref(), Some("f0"));
+        assert_eq!(picked.region, boxes[0].0);
+        let calls = runner.calls.borrow();
+        assert_eq!(calls[0].args, vec!["-f", "%x,%y %wx%h;%l"], "ohne -r");
+        assert_eq!(
+            calls[0].stdin.as_deref(),
+            Some(&b"100,80 500x366 f0\n-20,5 30x40 f1\n"[..])
+        );
+        drop(calls);
+
+        let runner = FakeRunner::default().respond(SLURP, exit(0, b"20,600 201x101;\n", ""));
+        let picked = pick_region(&runner, &boxes).expect("ok").expect("picked");
+        assert_eq!(picked.label, None, "frei aufgezogen");
+        assert_eq!(picked.region.width, 201);
+
+        let runner = FakeRunner::default().respond(SLURP, exit(1, b"", "selection cancelled\n"));
+        assert_eq!(pick_region(&runner, &boxes), Ok(None));
+        let runner = FakeRunner::default().respond(SLURP, exit(0, b";f0", ""));
+        assert!(pick_region(&runner, &boxes).is_err());
     }
 
     #[test]
