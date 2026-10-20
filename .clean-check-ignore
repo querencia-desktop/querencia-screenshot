@@ -1,4 +1,5 @@
-# Ausnahmen für ai-clean/clean_check.py (Screenshot 0.2.6, 20.10.2026).
+# Ausnahmen für ai-clean/clean_check.py (Screenshot 0.2.6, 20.10.2026;
+# ergänzt 0.2.7, G2-AH).
 # Bewusst KEINE Pfadeinträge: ein Pfad schaltet für ihn alle Prüfungen ab,
 # auch security. Die begründeten Ausnahmen stehen nur als Kommentar hier:
 #
@@ -10,3 +11,9 @@
 #      Kommentare folgen seit QS-0a durchgehend derselben Typografie
 #      (Projektstil, nicht global ersetzen).
 # S003 Backticks um Bezeichner in Kommentaren: Projektstil.
+# S004 auch in po/*.po, werkzeug/i18n.py und den englischen msgids (“ ” ’ …):
+#      Übersetzungen sind Daten; Englisch nutzt englische Typografie.
+# S003/S005 in werkzeug/i18n.py: Kopie aus dem Querencia Editor (G2-AC).
+# Doku-Standard (ENTSCHEIDUNGEN Nr. 17): CHANGELOG.md bleibt im Root
+#      (GitHub-Vorlage); CONTRIBUTING.md, SECURITY.md, MARKE.md kommen mit dem
+#      Vorlagen-Commit des Veröffentlichungsklons und bleiben dann im Root.

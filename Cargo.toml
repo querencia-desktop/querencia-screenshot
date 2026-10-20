@@ -1,6 +1,6 @@
 [package]
 name = "querencia-screenshot"
-version = "0.2.6"
+version = "0.2.7"
 edition = "2024"
 description = "Klassisches Screenshot-Werkzeug für Querencia Desktop (grim, slurp, wl-copy)"
 license = "GPL-3.0-or-later"
@@ -11,6 +11,9 @@ gtk = { package = "gtk4", version = "0.11", features = ["v4_12"] }
 # Aktives Fenster für --window (wlr-foreign-toplevel-management, labwc)
 wayland-client = "0.31"
 wayland-protocols-wlr = { version = "0.3", features = ["client"] }
+# Übersetzungen über GNU gettext (po/, .mo unter share/locale). Feature
+# gettext-system: das gettext der glibc statt eines mitgebauten libintl.
+gettext-rs = { version = "0.8", features = ["gettext-system"] }
 
 [profile.release]
 lto = true

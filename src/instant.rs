@@ -21,6 +21,7 @@ use crate::{
     capture::{self, CaptureError, Scope},
     cli::Target,
     clipboard, editor,
+    i18n::{gettext, gettext_f},
     runner::{self, CommandRunner},
     screenshot::Png,
     storage,
@@ -49,34 +50,36 @@ pub fn perform(
         let png = capture::capture(runner, &Scope::Region(region))?;
         Ok(Some(Shot { png, description }))
     };
-    let whole = |description: &str| -> Result<Option<Shot>, CaptureError> {
+    let whole = |description: String| -> Result<Option<Shot>, CaptureError> {
         let png = capture::capture(runner, &Scope::Everything)?;
-        Ok(Some(Shot {
-            png,
-            description: description.to_owned(),
-        }))
+        Ok(Some(Shot { png, description }))
     };
+    // TRANSLATORS: Beschreibung der Aufnahme (Speicherdialog, Statuszeile).
     match target {
-        Target::Screen => whole("Bildschirm"),
-        Target::Area => framed("Bereich".to_owned()),
+        Target::Screen => whole(gettext("Screen")),
+        Target::Area => framed(gettext("Area")),
         Target::Window => match toplevel::plan(query()) {
             WindowPlan::Output { output, window } => {
                 let png = capture::capture(runner, &Scope::Output(output.clone()))?;
                 Ok(Some(Shot {
                     png,
-                    description: format!("Fenster „{}“ (Vollbild auf {output})", window.label()),
+                    description: gettext_f(
+                        // TRANSLATORS: {output} ist der Name des Bildschirms (z. B. HDMI-A-1).
+                        "Window “{title}” (full screen on {output})",
+                        &[("title", &window.label()), ("output", &output.to_string())],
+                    ),
                 }))
             }
             WindowPlan::Frame {
                 window: Some(window),
-            } => framed(format!(
-                "Fenster „{}“, mit der Maus eingerahmt (labwc meldet keine Fenstergrenzen)",
-                window.label()
+            } => framed(gettext_f(
+                "Window “{title}”, framed with the mouse (labwc reports no window borders)",
+                &[("title", &window.label())],
             )),
-            WindowPlan::Frame { window: None } => framed(
-                "Fenster, mit der Maus eingerahmt (aktives Fenster nicht ermittelbar)".to_owned(),
-            ),
-            WindowPlan::Everything => whole("Kein aktives Fenster – ganzer Bildschirm"),
+            WindowPlan::Frame { window: None } => framed(gettext(
+                "Window, framed with the mouse (the active window could not be determined)",
+            )),
+            WindowPlan::Everything => whole(gettext("No active window – whole screen")),
         },
     }
 }
@@ -111,7 +114,7 @@ pub fn start(application: &gtk::Application, target: Target) {
             }
             Ok(Ok(None)) => println!("querencia-screenshot: abgebrochen – nichts gespeichert"),
             Ok(Err(error)) => show_error(&application, &error.to_string()),
-            Err(_) => show_error(&application, "Die Aufnahme wurde unerwartet beendet."),
+            Err(_) => show_error(&application, &gettext("The capture ended unexpectedly.")),
         }
         drop(hold);
     });
@@ -239,7 +242,7 @@ pub fn ask(
 
 pub fn show_error(application: &gtk::Application, message: &str) {
     eprintln!("querencia-screenshot: Fehler: {message}");
-    let window = titled_window(application, "Bildschirmfoto fehlgeschlagen", None);
+    let window = titled_window(application, &gettext("Screenshot Failed"), None);
     let root = gtk::Box::new(gtk::Orientation::Vertical, 10);
     root.set_margin_top(12);
     root.set_margin_bottom(12);
@@ -251,7 +254,7 @@ pub fn show_error(application: &gtk::Application, message: &str) {
     text.set_selectable(true);
     text.set_xalign(0.0);
     root.append(&text);
-    let close = ui::button("Schließen", &["window-close"]);
+    let close = ui::button(&gettext("Close"), &["window-close"]);
     close.set_halign(gtk::Align::End);
     {
         let window = window.clone();
@@ -293,15 +296,15 @@ pub fn directory_problem(directory: &Path) -> Option<String> {
     };
     if std::fs::symlink_metadata(directory).is_ok() {
         if !directory.is_dir() {
-            return Some(format!(
-                "„{}“ ist kein Ordner – bitte einen anderen Ordner wählen.",
-                directory.display()
+            return Some(gettext_f(
+                "“{path}” is not a folder – please choose another folder.",
+                &[("path", &directory.display().to_string())],
             ));
         }
         if !writable(directory) {
-            return Some(format!(
-                "Keine Schreibberechtigung für „{}“ – bitte einen anderen Ordner wählen.",
-                directory.display()
+            return Some(gettext_f(
+                "No permission to write to “{path}” – please choose another folder.",
+                &[("path", &directory.display().to_string())],
             ));
         }
         return None;
@@ -312,9 +315,9 @@ pub fn directory_problem(directory: &Path) -> Option<String> {
         .find(|path| std::fs::symlink_metadata(path).is_ok());
     match parent {
         Some(parent) if parent.is_dir() && writable(parent) => None,
-        _ => Some(format!(
-            "„{}“ fehlt und kann nicht angelegt werden – bitte einen anderen Ordner wählen.",
-            directory.display()
+        _ => Some(gettext_f(
+            "“{path}” is missing and cannot be created – please choose another folder.",
+            &[("path", &directory.display().to_string())],
         )),
     }
 }
@@ -372,7 +375,7 @@ pub fn show_save_dialog(application: &gtk::Application, request: SaveRequest) {
         on_closed,
     } = request;
     let shot = Shot { png, description };
-    let window = titled_window(application, "Bildschirmfoto speichern", parent.as_ref());
+    let window = titled_window(application, &gettext("Save Screenshot"), parent.as_ref());
     let root = gtk::Box::new(gtk::Orientation::Vertical, 8);
     root.set_margin_top(10);
     root.set_margin_bottom(10);
@@ -398,8 +401,13 @@ pub fn show_save_dialog(application: &gtk::Application, request: SaveRequest) {
     let size = shot
         .png
         .dimensions()
-        .map(|(w, h)| format!("{w} × {h} Pixel"))
-        .unwrap_or_else(|| "unbekannte Größe".to_owned());
+        .map(|(w, h)| {
+            gettext_f(
+                "{width} × {height} pixels",
+                &[("width", &w.to_string()), ("height", &h.to_string())],
+            )
+        })
+        .unwrap_or_else(|| gettext("unknown size"));
     let details = gtk::Label::new(Some(&format!("{} · {size}", shot.description)));
     details.set_xalign(0.0);
     details.set_wrap(true);
@@ -410,7 +418,9 @@ pub fn show_save_dialog(application: &gtk::Application, request: SaveRequest) {
     let grid = gtk::Grid::new();
     grid.set_row_spacing(6);
     grid.set_column_spacing(8);
-    let name_title = gtk::Label::with_mnemonic("_Name:");
+    // TRANSLATORS: Speicherdialog. Zugriffstasten von „_Name:“, „Save in
+    // _folder:“, „Copy to C_lipboard“, „_Cancel“, „_Save“ verschieden halten.
+    let name_title = gtk::Label::with_mnemonic(&gettext("_Name:"));
     name_title.set_xalign(1.0);
     let directory = suggested_folder.unwrap_or_else(storage::default_directory);
     let name = gtk::Entry::new();
@@ -420,7 +430,7 @@ pub fn show_save_dialog(application: &gtk::Application, request: SaveRequest) {
     name_title.set_mnemonic_widget(Some(&name));
     grid.attach(&name_title, 0, 0, 1, 1);
     grid.attach(&name, 1, 0, 1, 1);
-    let folder_title = gtk::Label::with_mnemonic("In _Ordner speichern:");
+    let folder_title = gtk::Label::with_mnemonic(&gettext("Save in _folder:"));
     folder_title.set_xalign(1.0);
     let folder_label = gtk::Label::new(Some(&directory.display().to_string()));
     folder_label.set_ellipsize(gtk::pango::EllipsizeMode::Start);
@@ -433,7 +443,7 @@ pub fn show_save_dialog(application: &gtk::Application, request: SaveRequest) {
     let folder_button = gtk::Button::new();
     folder_button.set_child(Some(&folder_content));
     folder_button.add_css_class("qs-button");
-    folder_button.set_tooltip_text(Some("Anderen Ordner wählen …"));
+    folder_button.set_tooltip_text(Some(&gettext("Choose another folder…")));
     folder_title.set_mnemonic_widget(Some(&folder_button));
     grid.attach(&folder_title, 0, 1, 1, 1);
     grid.attach(&folder_button, 1, 1, 1, 1);
@@ -448,14 +458,14 @@ pub fn show_save_dialog(application: &gtk::Application, request: SaveRequest) {
     root.append(&status);
 
     let actions = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-    let copy = ui::button("In die _Zwischenablage kopieren", &["edit-copy"]);
+    let copy = ui::button(&gettext("Copy to C_lipboard"), &["edit-copy"]);
     let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     spacer.set_hexpand(true);
-    let cancel_label = gtk::Label::with_mnemonic("_Abbrechen");
+    let cancel_label = gtk::Label::with_mnemonic(&gettext("_Cancel"));
     let cancel = gtk::Button::new();
     cancel.set_child(Some(&cancel_label));
     cancel.add_css_class("qs-button");
-    let save = ui::button("_Speichern", &["document-save"]);
+    let save = ui::button(&gettext("_Save"), &["document-save"]);
     for button in [&copy, &save] {
         mnemonic(button);
     }
@@ -562,19 +572,21 @@ fn copy_now(dialog: &Rc<Dialog>) {
         match gdk::Texture::from_bytes(&glib::Bytes::from(png.bytes())) {
             Ok(texture) => {
                 dialog.window.clipboard().set_texture(&texture);
-                dialog.status.set_text(
-                    "Kopiert über GTK (wl-copy fehlt): gilt nur, solange dieses Fenster offen bleibt.",
-                );
+                dialog.status.set_text(&gettext(
+                    "Copied through GTK (wl-copy is missing): valid only while this window stays open.",
+                ));
             }
             Err(_) => dialog
                 .status
-                .set_text("Kopieren nicht möglich: wl-copy fehlt."),
+                .set_text(&gettext("Cannot copy: wl-copy is missing.")),
         }
         return;
     }
     *dialog.busy.borrow_mut() = true;
     dialog.actions.set_sensitive(false);
-    dialog.status.set_text("Kopiere in die Zwischenablage …");
+    dialog
+        .status
+        .set_text(&gettext("Copying to the clipboard…"));
     let dialog = dialog.clone();
     glib::spawn_future_local(async move {
         let outcome =
@@ -586,12 +598,17 @@ fn copy_now(dialog: &Rc<Dialog>) {
                 println!("querencia-screenshot: in die Zwischenablage kopiert");
                 dialog
                     .status
-                    .set_text("In die Zwischenablage kopiert (image/png).");
+                    .set_text(&gettext("Copied to the clipboard (image/png)."));
                 // Die Daten hält wl-copy; das Fenster darf jetzt zu.
-                dialog.cancel_label.set_text_with_mnemonic("_Schließen");
+                // TRANSLATORS: ersetzt „_Cancel“ nach dem Kopieren.
+                dialog
+                    .cancel_label
+                    .set_text_with_mnemonic(&gettext("_Close"));
             }
             Ok(Err(error)) => dialog.status.set_text(&error.to_string()),
-            Err(_) => dialog.status.set_text("Kopieren wurde unerwartet beendet."),
+            Err(_) => dialog
+                .status
+                .set_text(&gettext("Copying ended unexpectedly.")),
         }
     });
 }
@@ -615,7 +632,7 @@ fn choose_folder(dialog: &Rc<Dialog>) {
     // use_header_bar(0): Knöpfe unten wie in GNOME 2, Titelleiste von
     // labwc (keine GTK-Kopfleiste, siehe „Fensterdekoration“ in ui.rs).
     let chooser = gtk::FileChooserDialog::builder()
-        .title("Ordner für das Bildschirmfoto wählen")
+        .title(gettext("Choose a Folder for the Screenshot"))
         .transient_for(&dialog.window)
         .modal(true)
         .use_header_bar(0)
@@ -623,8 +640,9 @@ fn choose_folder(dialog: &Rc<Dialog>) {
         .default_width(760)
         .default_height(500)
         .build();
-    chooser.add_button("_Abbrechen", gtk::ResponseType::Cancel);
-    chooser.add_button("_Auswählen", gtk::ResponseType::Accept);
+    chooser.add_button(&gettext("_Cancel"), gtk::ResponseType::Cancel);
+    // TRANSLATORS: Knopf im Ordnerdialog.
+    chooser.add_button(&gettext("_Select"), gtk::ResponseType::Accept);
     chooser.set_default_response(gtk::ResponseType::Accept);
     chooser.add_css_class("qs-window");
     // Kein set_icon_name, siehe „Fenstersymbol“ in ui.rs.
@@ -653,7 +671,7 @@ fn choose_folder(dialog: &Rc<Dialog>) {
         let Some(path) = file.path() else {
             dialog
                 .status
-                .set_text("Nur lokale Ordner werden unterstützt.");
+                .set_text(&gettext("Only local folders are supported."));
             return;
         };
         println!("querencia-screenshot: Ordner gewählt: {}", path.display());
@@ -706,7 +724,7 @@ mod tests {
             .expect("ok")
             .expect("shot");
         assert_eq!(shot.png.dimensions(), Some((1920, 1080)));
-        assert_eq!(shot.description, "Bildschirm");
+        assert_eq!(shot.description, "Screen");
         let calls = runner.calls.borrow();
         assert_eq!(calls.len(), 1, "kein slurp, keine Rückfrage");
         assert_eq!(calls[0].args, vec!["-t", "png", "-l", "1", "-"]);
@@ -722,7 +740,7 @@ mod tests {
             runner.calls.borrow()[0].args,
             vec!["-t", "png", "-l", "1", "-o", "HEADLESS-2", "-"]
         );
-        assert!(shot.description.contains("Vollbild auf HEADLESS-2"));
+        assert!(shot.description.contains("full screen on HEADLESS-2"));
     }
 
     #[test]
@@ -733,8 +751,8 @@ mod tests {
         let shot = perform(&runner, Target::Window, || editor(false))
             .expect("ok")
             .expect("shot");
-        assert!(shot.description.contains("„Brief.txt – Editor“"));
-        assert!(shot.description.contains("eingerahmt"));
+        assert!(shot.description.contains("“Brief.txt – Editor”"));
+        assert!(shot.description.contains("framed"));
         assert_eq!(
             runner.calls.borrow()[1].args,
             vec!["-t", "png", "-l", "1", "-g", "10,20 300x200", "-"]
@@ -760,7 +778,7 @@ mod tests {
         let shot = perform(&runner, Target::Window, || WindowQuery::NoActiveWindow)
             .expect("ok")
             .expect("shot");
-        assert!(shot.description.starts_with("Kein aktives Fenster"));
+        assert!(shot.description.starts_with("No active window"));
     }
 
     #[test]
@@ -780,7 +798,7 @@ mod tests {
             perform(&runner, Target::Screen, never)
                 .expect_err("missing")
                 .to_string(),
-            "Programm „grim“ ist nicht installiert"
+            "The program “grim” is not installed"
         );
     }
 
@@ -803,12 +821,12 @@ mod tests {
         assert!(
             directory_problem(&file)
                 .expect("problem")
-                .contains("ist kein Ordner")
+                .contains("is not a folder")
         );
         assert!(
             directory_problem(&file.join("unter"))
                 .expect("problem")
-                .contains("kann nicht angelegt werden")
+                .contains("cannot be created")
         );
         let locked = root.join("gesperrt");
         std::fs::create_dir(&locked).expect("dir");
@@ -816,7 +834,7 @@ mod tests {
         assert!(
             directory_problem(&locked)
                 .expect("problem")
-                .starts_with("Keine Schreibberechtigung")
+                .starts_with("No permission to write")
         );
         assert!(directory_problem(&locked.join("Screenshots")).is_some());
         assert_eq!(

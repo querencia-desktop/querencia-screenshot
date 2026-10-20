@@ -5,6 +5,8 @@
 
 use std::fmt;
 
+use crate::i18n::{gettext, gettext_f};
+
 /// Größte zulässige Kantenlänge eines Bereichs; schützt grim vor absurden
 /// Werten aus einer manipulierten Auswahl.
 pub const MAX_EDGE: u32 = 32_768;
@@ -30,13 +32,18 @@ pub enum GeometryError {
 impl fmt::Display for GeometryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Empty => write!(f, "Keine Auswahl"),
-            Self::Malformed(text) => write!(f, "Ungültige Geometrie: {text:?}"),
-            Self::Degenerate(region) => write!(
-                f,
-                "Ungültige Größe: {}×{} Pixel",
-                region.width, region.height
-            ),
+            Self::Empty => f.write_str(&gettext("No selection")),
+            Self::Malformed(text) => f.write_str(&gettext_f(
+                "Invalid geometry: {text}",
+                &[("text", &format!("{text:?}"))],
+            )),
+            Self::Degenerate(region) => f.write_str(&gettext_f(
+                "Invalid size: {width}×{height} pixels",
+                &[
+                    ("width", &region.width.to_string()),
+                    ("height", &region.height.to_string()),
+                ],
+            )),
         }
     }
 }

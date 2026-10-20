@@ -6,6 +6,7 @@ use std::fmt;
 
 use crate::{
     geometry::{GeometryError, Region},
+    i18n::gettext_f,
     runner::{CommandRunner, RunError},
     screenshot::{Png, PngError},
 };
@@ -39,12 +40,15 @@ impl fmt::Display for CaptureError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Run(error) => write!(f, "{error}"),
-            Self::Failed { status, stderr } if stderr.is_empty() => {
-                write!(f, "Die Aufnahme ist fehlgeschlagen (Status {status})")
-            }
-            Self::Failed { stderr, .. } => {
-                write!(f, "Die Aufnahme ist fehlgeschlagen: {}", stderr.trim())
-            }
+            Self::Failed { status, stderr } if stderr.is_empty() => f.write_str(&gettext_f(
+                "The capture failed (status {status})",
+                &[("status", &status.to_string())],
+            )),
+            Self::Failed { stderr, .. } => f.write_str(&gettext_f(
+                // TRANSLATORS: {message} ist die Fehlermeldung von grim.
+                "The capture failed: {message}",
+                &[("message", stderr.trim())],
+            )),
             Self::Geometry(error) => write!(f, "{error}"),
             Self::Image(error) => write!(f, "{error}"),
         }
@@ -99,7 +103,10 @@ pub fn capture(runner: &dyn CommandRunner, scope: &Scope) -> Result<Png, Capture
             if name.is_empty() || name.len() > 64 || name.chars().any(char::is_control) {
                 return Err(CaptureError::Failed {
                     status: -1,
-                    stderr: format!("ungültiger Ausgabename {name:?}"),
+                    stderr: gettext_f(
+                        "invalid output name {name}",
+                        &[("name", &format!("{name:?}"))],
+                    ),
                 });
             }
             args.extend(["-o", name.as_str()]);
@@ -308,11 +315,8 @@ mod tests {
             status: 2,
             stderr: String::new(),
         };
-        assert_eq!(
-            error.to_string(),
-            "Die Aufnahme ist fehlgeschlagen (Status 2)"
-        );
+        assert_eq!(error.to_string(), "The capture failed (status 2)");
         let error = CaptureError::Run(RunError::Missing("slurp".into()));
-        assert_eq!(error.to_string(), "Programm „slurp“ ist nicht installiert");
+        assert_eq!(error.to_string(), "The program “slurp” is not installed");
     }
 }

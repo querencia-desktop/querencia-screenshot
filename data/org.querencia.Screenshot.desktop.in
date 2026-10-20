@@ -1,0 +1,22 @@
+[Desktop Entry]
+# Querencia Screenshot. Desktop-ID = GApplication-ID = StartupWMClass
+# org.querencia.Screenshot. Startet das Auswahlfenster; danach öffnet sich
+# der Editor. Die Druck-Taste läuft über den Runtime-Starter
+# querencia-screenshot-start und ist nicht Teil dieser Datei.
+# Vorlage: Name, GenericName, Comment und Keywords sind englisch; die
+# Übersetzungen (Name[de]= …) setzt `werkzeug/i18n.py desktop` aus po/*.po
+# ein (entspricht msgfmt --desktop). Erzeugt: org.querencia.Screenshot.desktop.
+# Exec/TryExec ohne Pfad; die Integration setzt die Ablage ein.
+Type=Application
+Version=1.5
+Name=Take Screenshot
+GenericName=Screenshot
+Comment=Take a screenshot of the screen, a window or an area and annotate it
+Exec=querencia-screenshot
+TryExec=querencia-screenshot
+Icon=org.querencia.Screenshot
+Terminal=false
+Categories=GTK;Utility;
+Keywords=Screenshot;Capture;Screen;
+StartupNotify=true
+StartupWMClass=org.querencia.Screenshot

@@ -23,6 +23,8 @@ use wayland_protocols_wlr::foreign_toplevel::v1::client::{
     zwlr_foreign_toplevel_manager_v1::{self, ZwlrForeignToplevelManagerV1},
 };
 
+use crate::i18n::gettext;
+
 /// Was über das aktive Fenster bekannt ist.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ActiveWindow {
@@ -43,7 +45,8 @@ impl ActiveWindow {
             self.title.trim()
         };
         if name.is_empty() {
-            return "ohne Titel".to_owned();
+            // TRANSLATORS: Fenster ohne Titel und App-ID, steht in „Window “{title}” …“.
+            return gettext("untitled");
         }
         let short: String = name.chars().take(60).collect();
         if short.len() < name.len() {
@@ -335,7 +338,7 @@ mod tests {
             ..ActiveWindow::default()
         };
         assert_eq!(untitled.label(), "foot");
-        assert_eq!(ActiveWindow::default().label(), "ohne Titel");
+        assert_eq!(ActiveWindow::default().label(), "untitled");
         let long = ActiveWindow {
             title: "ä".repeat(100),
             ..ActiveWindow::default()

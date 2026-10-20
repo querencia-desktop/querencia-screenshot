@@ -10,7 +10,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::screenshot::Png;
+use crate::{
+    i18n::{gettext, gettext_f},
+    screenshot::Png,
+};
 
 const FOLDER: &str = "Screenshots";
 const PREFIX: &str = "Screenshot";
@@ -29,35 +32,44 @@ pub enum SaveError {
 
 impl fmt::Display for SaveError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::CreateDirectory(path, error) => {
-                write!(
-                    f,
-                    "Ordner „{}“ kann nicht angelegt werden: {error}",
-                    path.display()
-                )
-            }
-            Self::NotADirectory(path) => write!(f, "„{}“ ist kein Ordner", path.display()),
-            Self::NoFreeName(path) => write!(f, "Kein freier Dateiname in „{}“", path.display()),
+        let text = match self {
+            Self::CreateDirectory(path, error) => gettext_f(
+                "Cannot create the folder “{path}”: {error}",
+                &[
+                    ("path", &path.display().to_string()),
+                    ("error", &error.to_string()),
+                ],
+            ),
+            Self::NotADirectory(path) => gettext_f(
+                "“{path}” is not a folder",
+                &[("path", &path.display().to_string())],
+            ),
+            Self::NoFreeName(path) => gettext_f(
+                "No free file name in “{path}”",
+                &[("path", &path.display().to_string())],
+            ),
             Self::Write(path, error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
-                write!(
-                    f,
-                    "Keine Schreibberechtigung für „{}“ – bitte einen anderen Ordner wählen",
-                    path.display()
+                gettext_f(
+                    "No permission to write to “{path}” – please choose another folder",
+                    &[("path", &path.display().to_string())],
                 )
             }
-            Self::Write(path, error) => write!(
-                f,
-                "„{}“ kann nicht geschrieben werden: {error}",
-                path.display()
+            Self::Write(path, error) => gettext_f(
+                "Cannot write “{path}”: {error}",
+                &[
+                    ("path", &path.display().to_string()),
+                    ("error", &error.to_string()),
+                ],
             ),
-            Self::Exists(path) => write!(
-                f,
-                "„{}“ existiert bereits – bitte einen anderen Namen wählen",
-                path.display()
+            Self::Exists(path) => gettext_f(
+                "“{path}” already exists – please choose another name",
+                &[("path", &path.display().to_string())],
             ),
-            Self::InvalidName(reason) => write!(f, "Ungültiger Dateiname: {reason}"),
-        }
+            Self::InvalidName(reason) => {
+                gettext_f("Invalid file name: {reason}", &[("reason", reason)])
+            }
+        };
+        f.write_str(&text)
     }
 }
 
@@ -117,16 +129,17 @@ pub fn validate_name(input: &str) -> Result<String, SaveError> {
     let name = input.trim();
     let invalid = |reason: &str| Err(SaveError::InvalidName(reason.to_owned()));
     if name.is_empty() {
-        return invalid("der Name ist leer");
+        // TRANSLATORS: Gründe hinter „Invalid file name: “, klein ohne Punkt.
+        return invalid(&gettext("the name is empty"));
     }
     if name.contains('/') {
-        return invalid("„/“ ist im Namen nicht erlaubt");
+        return invalid(&gettext("“/” is not allowed in the name"));
     }
     if name.chars().any(char::is_control) {
-        return invalid("Steuerzeichen sind im Namen nicht erlaubt");
+        return invalid(&gettext("control characters are not allowed in the name"));
     }
     if name == "." || name == ".." {
-        return invalid("„.“ und „..“ sind keine Dateinamen");
+        return invalid(&gettext("“.” and “..” are not file names"));
     }
     let name = if name.to_lowercase().ends_with(".png") {
         name.to_owned()
@@ -134,7 +147,7 @@ pub fn validate_name(input: &str) -> Result<String, SaveError> {
         format!("{name}.png")
     };
     if name.len() > 255 {
-        return invalid("der Name ist zu lang (höchstens 255 Byte)");
+        return invalid(&gettext("the name is too long (at most 255 bytes)"));
     }
     Ok(name)
 }
@@ -297,13 +310,13 @@ mod tests {
         fs::write(&file, b"").expect("file");
         let error = save_exact(&file, "a", &png).expect_err("file");
         assert!(matches!(error, SaveError::NotADirectory(_)));
-        assert!(error.to_string().contains("ist kein Ordner"));
+        assert!(error.to_string().contains("is not a folder"));
         let locked = root.join("gesperrt");
         fs::create_dir(&locked).expect("dir");
         fs::set_permissions(&locked, fs::Permissions::from_mode(0o500)).expect("chmod");
         let error = save_exact(&locked, "a", &png).expect_err("readonly");
         assert!(
-            error.to_string().starts_with("Keine Schreibberechtigung"),
+            error.to_string().starts_with("No permission to write"),
             "{error}"
         );
         assert!(fs::read_dir(&locked).expect("list").next().is_none());

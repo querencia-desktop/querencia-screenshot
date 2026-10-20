@@ -4,6 +4,28 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen
 nach [Semantic Versioning](https://semver.org/lang/de/). Solange die Hauptversion
 0 ist, kann sich alles ändern. Jede Zeile nennt, was Nutzer merken.
 
+## [0.2.7] – 2026-10-20
+
+Ab `main` (0.2.6). Die Fensterwahl aus 0.2.5 (Zweig `fensterwahl`) ist
+weiterhin nicht enthalten.
+
+### Hinzugefügt
+- **Englische Oberfläche** über GNU gettext (ENTSCHEIDUNGEN Nr. 16):
+  Texte englisch im Code, Deutsch aus `po/de.po` mit dem bisherigen Wortlaut.
+  Die Sprache folgt `LANGUAGE`/`LANG`; ohne deutschen Katalog erscheint
+  Englisch. Wortschatz nach GNOME 2 (gnome-screenshot, gedit 2.30).
+- Desktop-Datei im Repo: `data/org.querencia.Screenshot.desktop` (aus der
+  englischen Vorlage `.desktop.in` erzeugt, mit `Name[de]` usw.).
+- `werkzeug/i18n.py` für die po-Pflege (wie im Editor).
+
+### Geändert
+- Zugriffstasten im Englischen nach GNOME 2 (Speicherdialog Alt+N/F/L/C/S,
+  Menüs File/Edit/Tools/View); im Deutschen unverändert.
+- Lizenzkopf in `LICENSE` (Copyright „Querencia Desktop contributors“,
+  ENTSCHEIDUNGEN Nr. 14 Q5).
+- MetaInfo: Version 0.2.7, Homepage auf das geplante Repo in der
+  Organisation `querencia-desktop` statt des privaten `classic2`.
+
 ## [0.2.6] – 2026-10-19
 
 Ab `main` (0.2.4); die Fensterwahl aus 0.2.5 (Zweig `fensterwahl`) ist nicht

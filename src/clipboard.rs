@@ -5,6 +5,7 @@
 use std::fmt;
 
 use crate::{
+    i18n::gettext_f,
     runner::{CommandRunner, RunError},
     screenshot::{MIME_TYPE, Png},
 };
@@ -21,10 +22,15 @@ impl fmt::Display for ClipboardError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Run(error) => write!(f, "{error}"),
-            Self::Failed { status, stderr } if stderr.is_empty() => {
-                write!(f, "Kopieren fehlgeschlagen (Status {status})")
-            }
-            Self::Failed { stderr, .. } => write!(f, "Kopieren fehlgeschlagen: {}", stderr.trim()),
+            Self::Failed { status, stderr } if stderr.is_empty() => f.write_str(&gettext_f(
+                "Copying failed (status {status})",
+                &[("status", &status.to_string())],
+            )),
+            Self::Failed { stderr, .. } => f.write_str(&gettext_f(
+                // TRANSLATORS: {message} ist die Fehlermeldung von wl-copy.
+                "Copying failed: {message}",
+                &[("message", stderr.trim())],
+            )),
         }
     }
 }
@@ -95,7 +101,7 @@ mod tests {
         );
         assert_eq!(
             copy_png(&failed, &png).expect_err("failure").to_string(),
-            "Kopieren fehlgeschlagen (Status 1)",
+            "Copying failed (status 1)",
             "stderr von wl-copy steht im Protokoll, nicht in der Meldung"
         );
     }

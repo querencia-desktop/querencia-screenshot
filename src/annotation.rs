@@ -7,6 +7,8 @@
 //! nur um. Die Aufnahme selbst wird nie verändert – erst beim Speichern oder
 //! Kopieren werden Bild und Markierungen zusammengeführt (`render`).
 
+use crate::i18n::{gettext, gettext_f};
+
 /// Kleinste Ausdehnung (Originalpixel), ab der eine Form übernommen wird;
 /// ein bloßer Klick erzeugt keine leere Ellipse.
 pub const MIN_EXTENT: f64 = 3.0;
@@ -49,13 +51,16 @@ impl Tool {
         Self::ALL.into_iter().find(|tool| tool.id() == id)
     }
 
-    pub fn label(self) -> &'static str {
+    /// Name in Menü, Werkzeugleiste und Statuszeile (übersetzt).
+    pub fn label(self) -> String {
         match self {
-            Self::Pen => "Stift",
-            Self::Ellipse => "Kreis/Ellipse",
-            Self::Rectangle => "Rechteck",
-            Self::Arrow => "Pfeil",
-            Self::Text => "Text",
+            // TRANSLATORS: Werkzeuge des Editors (Menü Werkzeuge, Statuszeile).
+            Self::Pen => gettext("Pen"),
+            Self::Ellipse => gettext("Circle/Ellipse"),
+            Self::Rectangle => gettext("Rectangle"),
+            Self::Arrow => gettext("Arrow"),
+            // TRANSLATORS: Werkzeug „Text“ des Editors.
+            Self::Text => gettext("Text"),
         }
     }
 
@@ -70,17 +75,17 @@ impl Tool {
         }
     }
 
-    pub fn tooltip(self) -> &'static str {
+    pub fn tooltip(self) -> String {
+        // TRANSLATORS: Die Buchstaben in Klammern sind die festen
+        // Werkzeugtasten (P, E, R, A, T) und bleiben in jeder Sprache gleich.
         match self {
-            Self::Pen => "Stift (P): mit gedrückter Maustaste frei zeichnen",
-            Self::Ellipse => {
-                "Kreis/Ellipse (E): Maus ziehen, um etwas einzukreisen – mit Umschalt ein runder Kreis"
-            }
-            Self::Rectangle => "Rechteck (R): Maus ziehen – mit Umschalt ein Quadrat",
-            Self::Arrow => "Pfeil (A): vom Anfang zur Spitze ziehen",
-            Self::Text => {
-                "Text (T): auf das Bild klicken und Text eingeben, Eingabetaste übernimmt"
-            }
+            Self::Pen => gettext("Pen (P): draw freely while holding the mouse button"),
+            Self::Ellipse => gettext(
+                "Circle/Ellipse (E): drag to circle something – hold Shift for a round circle",
+            ),
+            Self::Rectangle => gettext("Rectangle (R): drag – hold Shift for a square"),
+            Self::Arrow => gettext("Arrow (A): drag from the start to the tip"),
+            Self::Text => gettext("Text (T): click on the picture and type, Enter confirms"),
         }
     }
 }
@@ -94,11 +99,29 @@ pub struct Color {
     b: f64,
 }
 
-/// Eine Grundfarbe der Palette: Farbe, Kennung (Aktionsziel), Name.
+/// Eine Grundfarbe der Palette: Farbe, Kennung (Aktionsziel); den Namen
+/// liefert [`Named::label`].
 pub struct Named {
     pub color: Color,
     pub id: &'static str,
-    pub label: &'static str,
+}
+
+impl Named {
+    /// Name der Grundfarbe (übersetzt).
+    pub fn label(&self) -> String {
+        // TRANSLATORS: Grundfarben der Palette.
+        match self.id {
+            "rot" => gettext("Red"),
+            "orange" => gettext("Orange"),
+            "gelb" => gettext("Yellow"),
+            "gruen" => gettext("Green"),
+            "blau" => gettext("Blue"),
+            "violett" => gettext("Violet"),
+            "schwarz" => gettext("Black"),
+            "weiss" => gettext("White"),
+            other => other.to_owned(),
+        }
+    }
 }
 
 impl Color {
@@ -117,42 +140,34 @@ impl Color {
         Named {
             color: Color::RED,
             id: "rot",
-            label: "Rot",
         },
         Named {
             color: Color::ORANGE,
             id: "orange",
-            label: "Orange",
         },
         Named {
             color: Color::YELLOW,
             id: "gelb",
-            label: "Gelb",
         },
         Named {
             color: Color::GREEN,
             id: "gruen",
-            label: "Grün",
         },
         Named {
             color: Color::BLUE,
             id: "blau",
-            label: "Blau",
         },
         Named {
             color: Color::VIOLET,
             id: "violett",
-            label: "Violett",
         },
         Named {
             color: Color::BLACK,
             id: "schwarz",
-            label: "Schwarz",
         },
         Named {
             color: Color::WHITE,
             id: "weiss",
-            label: "Weiß",
         },
     ];
 
@@ -216,8 +231,9 @@ impl Color {
 
     pub fn label(self) -> String {
         self.named().map_or_else(
-            || format!("eigene Farbe {}", self.hex()),
-            |named| named.label.to_owned(),
+            // TRANSLATORS: {hex} ist „#RRGGBB“.
+            || gettext_f("custom color {hex}", &[("hex", &self.hex())]),
+            Named::label,
         )
     }
 
@@ -259,11 +275,18 @@ impl Width {
     /// Standard wie bisher („Mittel“).
     pub const MEDIUM: Width = Width(4);
     pub const THICK: Width = Width(8);
-    pub const PRESETS: [(Width, &'static str); 3] = [
-        (Width::THIN, "Dünn"),
-        (Width::MEDIUM, "Mittel"),
-        (Width::THICK, "Dick"),
-    ];
+    pub const PRESETS: [Width; 3] = [Width::THIN, Width::MEDIUM, Width::THICK];
+
+    /// Name der Schnellwahl im Menü Werkzeuge (übersetzt), sonst `None`.
+    pub fn preset_name(self) -> Option<String> {
+        // TRANSLATORS: Strichstärken der Schnellwahl im Menü Werkzeuge.
+        match self {
+            Width::THIN => Some(gettext("Thin")),
+            Width::MEDIUM => Some(gettext("Medium")),
+            Width::THICK => Some(gettext("Thick")),
+            _ => None,
+        }
+    }
 
     /// Auf 1 … 20 begrenzt.
     pub fn from_px(px: f64) -> Self {
@@ -540,7 +563,7 @@ mod tests {
         assert!(custom.is_custom());
         assert_eq!(custom.id(), "#3366CC");
         assert_eq!(Color::from_id("#3366cc"), Some(custom));
-        assert_eq!(custom.label(), "eigene Farbe #3366CC");
+        assert_eq!(custom.label(), "custom color #3366CC");
         // Eine eigene Farbe, die genau einer Grundfarbe entspricht, ist diese.
         assert_eq!(Color::from_id("#E60000"), Some(Color::RED));
         assert_eq!(Color::from_unit(230.0 / 255.0, 0.0, 0.0), Color::RED);

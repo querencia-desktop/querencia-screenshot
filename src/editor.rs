@@ -22,7 +22,9 @@ use gtk::{cairo, gdk, gio, glib, prelude::*};
 
 use crate::{
     annotation::{Color, Mark, Marks, Point, Shape, Tool, Width, constrain},
-    clipboard, instant, render,
+    clipboard,
+    i18n::{gettext, gettext_f, ngettext_f, pgettext},
+    instant, render,
     runner::{self, CommandRunner as _},
     screenshot::Png,
     storage, ui,
@@ -168,9 +170,10 @@ impl Editor {
         if let Some(palette) = self.palette.borrow().as_ref() {
             let color = self.color.get();
             palette.button.set_sensitive(!text_mode && !self.busy.get());
-            palette.button.set_tooltip_text(Some(&format!(
-                "Farbe: {} – Farbpalette öffnen (F)",
-                color.label()
+            palette.button.set_tooltip_text(Some(&gettext_f(
+                // TRANSLATORS: „F“ ist die feste Taste für die Farbpalette.
+                "Color: {color} – open the color palette (F)",
+                &[("color", &color.label())],
             )));
             palette.current.queue_draw();
             palette.custom_swatch.set_visible(color.is_custom());
@@ -179,9 +182,10 @@ impl Editor {
         if let Some(stroke) = self.stroke.borrow().as_ref() {
             let width = self.width.get();
             stroke.button.set_sensitive(!text_mode && !self.busy.get());
-            stroke.button.set_tooltip_text(Some(&format!(
-                "Strichstärke: {} – Auswahl öffnen (S)",
-                width.label()
+            stroke.button.set_tooltip_text(Some(&gettext_f(
+                // TRANSLATORS: „S“ ist die feste Taste für die Strichstärke.
+                "Line width: {width} – open the selection (S)",
+                &[("width", &width.label())],
             )));
             stroke.value.set_text(&width.label());
             // Schieberegler nachführen (z. B. nach der Menü-Schnellwahl);
@@ -203,23 +207,28 @@ impl Editor {
     fn update_status(&self) {
         let (iw, ih) = self.image_size();
         let view = self.view();
+        // TRANSLATORS: Statuszeile des Editors, steht hinter „Pen: “ usw.
         let hint = match self.tool.get() {
-            Tool::Text => "auf das Bild klicken und Text eingeben",
-            Tool::Pen => "mit gedrückter Maustaste auf dem Bild zeichnen",
-            _ => "mit gedrückter Maustaste auf dem Bild ziehen",
+            Tool::Text => gettext("click on the picture and type text"),
+            Tool::Pen => gettext("draw on the picture while holding the mouse button"),
+            _ => gettext("drag on the picture while holding the mouse button"),
         };
         let count = self.marks.borrow().items().len();
-        let mut text = format!(
-            "{} × {} Pixel · {:.0} % · {}: {} ({}, {}) · {} Markierung{}",
-            iw,
-            ih,
-            view.scale * 100.0,
-            self.tool.get().label(),
-            hint,
-            self.color.get().label(),
-            self.width.get().label(),
+        let mut text = ngettext_f(
+            // TRANSLATORS: Statuszeile des Editors: Bildgröße, Zoom,
+            // Werkzeug mit Hinweis, Farbe, Strichstärke, Zahl der Markierungen.
+            "{width} × {height} pixels · {zoom} % · {tool}: {hint} ({color}, {stroke}) · {n} annotation",
+            "{width} × {height} pixels · {zoom} % · {tool}: {hint} ({color}, {stroke}) · {n} annotations",
             count,
-            if count == 1 { "" } else { "en" }
+            &[
+                ("width", &format!("{iw}")),
+                ("height", &format!("{ih}")),
+                ("zoom", &format!("{:.0}", view.scale * 100.0)),
+                ("tool", &self.tool.get().label()),
+                ("hint", &hint),
+                ("color", &self.color.get().label()),
+                ("stroke", &self.width.get().label()),
+            ],
         );
         let message = self.message.borrow();
         if !message.is_empty() {
@@ -258,7 +267,8 @@ pub fn open(application: &gtk::Application, source: Source) {
     };
     let window = gtk::ApplicationWindow::builder()
         .application(application)
-        .title("Querencia Screenshot – Bearbeiten")
+        // TRANSLATORS: Fenstertitel des Editors; der Programmname bleibt.
+        .title(gettext("Querencia Screenshot – Edit"))
         .build();
     window.add_css_class("qs-window");
     window.add_css_class("qs-editor");
@@ -282,8 +292,8 @@ pub fn open(application: &gtk::Application, source: Source) {
 
     let entry = gtk::Entry::new();
     entry.set_width_chars(28);
-    entry.set_placeholder_text(Some("Text eingeben"));
-    let text_hint = gtk::Label::new(Some("Eingabetaste übernimmt, Esc verwirft"));
+    entry.set_placeholder_text(Some(&gettext("Type text")));
+    let text_hint = gtk::Label::new(Some(&gettext("Enter confirms, Esc discards")));
     text_hint.add_css_class("qs-hint");
     let text_box = gtk::Box::new(gtk::Orientation::Vertical, 2);
     text_box.add_css_class("qs-textbox");
@@ -422,13 +432,13 @@ fn install_actions(application: &gtk::Application, editor: &Rc<Editor>) {
     simple("close", |editor| editor.window.close());
     simple("undo", |editor| {
         if editor.marks.borrow_mut().undo() {
-            editor.say("Rückgängig gemacht");
+            editor.say(&gettext("Undone"));
         }
         editor.refresh();
     });
     simple("redo", |editor| {
         if editor.marks.borrow_mut().redo() {
-            editor.say("Wiederholt");
+            editor.say(&gettext("Redone"));
         }
         editor.refresh();
     });
@@ -531,56 +541,65 @@ fn apply_zoom(editor: &Rc<Editor>) {
 fn menu_bar() -> gtk::PopoverMenuBar {
     let menu = gio::Menu::new();
     let file = gio::Menu::new();
-    file.append(Some("_Neue Aufnahme"), Some("win.new"));
+    // TRANSLATORS: Menüs des Editors (Wortschatz gedit 2.30); Zugriffstasten
+    // je Menü und in der Menüleiste verschieden halten.
+    file.append(Some(&gettext("_New Screenshot")), Some("win.new"));
     let section = gio::Menu::new();
-    section.append(Some("_Speichern …"), Some("win.save"));
-    section.append(Some("In die _Zwischenablage kopieren"), Some("win.copy"));
+    section.append(Some(&gettext("_Save…")), Some("win.save"));
+    section.append(Some(&gettext("Copy to C_lipboard")), Some("win.copy"));
     file.append_section(None, &section);
     let section = gio::Menu::new();
-    section.append(Some("S_chließen"), Some("win.close"));
+    // TRANSLATORS: Menü Datei; im Deutschen „S_chließen“ (S ist „Speichern“).
+    section.append(Some(&pgettext("File menu", "_Close")), Some("win.close"));
     file.append_section(None, &section);
-    menu.append_submenu(Some("_Datei"), &file);
+    menu.append_submenu(Some(&gettext("_File")), &file);
 
     let edit = gio::Menu::new();
-    edit.append(Some("_Rückgängig"), Some("win.undo"));
-    edit.append(Some("_Wiederholen"), Some("win.redo"));
+    edit.append(Some(&gettext("_Undo")), Some("win.undo"));
+    edit.append(Some(&gettext("_Redo")), Some("win.redo"));
     let section = gio::Menu::new();
-    section.append(Some("_Alle Markierungen entfernen …"), Some("win.clear"));
+    section.append(
+        Some(&gettext("Remove _All Annotations…")),
+        Some("win.clear"),
+    );
     edit.append_section(None, &section);
-    menu.append_submenu(Some("_Bearbeiten"), &edit);
+    menu.append_submenu(Some(&gettext("_Edit")), &edit);
 
     let tools = gio::Menu::new();
     let section = gio::Menu::new();
     for tool in Tool::ALL {
         section.append(
-            Some(tool.label()),
+            Some(&tool.label()),
             Some(&format!("win.tool::{}", tool.id())),
         );
     }
     tools.append_section(None, &section);
     let colors = gio::Menu::new();
     for named in &Color::PALETTE {
-        colors.append(Some(named.label), Some(&format!("win.color::{}", named.id)));
+        colors.append(
+            Some(&named.label()),
+            Some(&format!("win.color::{}", named.id)),
+        );
     }
-    colors.append(
-        Some("_Benutzerdefinierte Farbe …"),
-        Some("win.color-custom"),
-    );
-    tools.append_section(Some("Farbe"), &colors);
+    colors.append(Some(&gettext("_Custom Color…")), Some("win.color-custom"));
+    // TRANSLATORS: Abschnittstitel im Menü Werkzeuge.
+    tools.append_section(Some(&gettext("Color")), &colors);
     let widths = gio::Menu::new();
-    for (width, name) in Width::PRESETS {
+    for width in Width::PRESETS {
+        let name = width.preset_name().unwrap_or_default();
         widths.append(
             Some(&format!("{name} ({})", width.label())),
             Some(&format!("win.width::{}", width.id())),
         );
     }
-    widths.append(Some("_Strichstärke einstellen …"), Some("win.stroke"));
-    tools.append_section(Some("Strichstärke"), &widths);
-    menu.append_submenu(Some("_Werkzeuge"), &tools);
+    widths.append(Some(&gettext("Set _Line Width…")), Some("win.stroke"));
+    // TRANSLATORS: Abschnittstitel im Menü Werkzeuge.
+    tools.append_section(Some(&gettext("Line Width")), &widths);
+    menu.append_submenu(Some(&gettext("_Tools")), &tools);
 
     let view = gio::Menu::new();
-    view.append(Some("Ins Fenster _einpassen"), Some("win.fit"));
-    menu.append_submenu(Some("_Ansicht"), &view);
+    view.append(Some(&gettext("_Fit to Window")), Some("win.fit"));
+    menu.append_submenu(Some(&gettext("_View")), &view);
 
     let bar = gtk::PopoverMenuBar::from_model(Some(&menu));
     bar.add_css_class("qs-menubar");
@@ -672,7 +691,7 @@ fn current_color(weak: &Weak<Editor>) -> Color {
 
 /// Eine Grundfarbe im Palettenraster; die gewählte ist eingedrückt,
 /// orange umrandet und mit einem Häkchen versehen.
-fn palette_swatch(name: &'static str, label: &'static str, color: Color) -> gtk::ToggleButton {
+fn palette_swatch(name: &'static str, label: &str, color: Color) -> gtk::ToggleButton {
     let toggle = gtk::ToggleButton::new();
     let area = gtk::DrawingArea::new();
     area.set_content_width(26);
@@ -728,7 +747,7 @@ fn palette_button(editor: &Rc<Editor>) -> gtk::MenuButton {
     grid.set_row_spacing(3);
     grid.set_column_spacing(3);
     for (i, named) in Color::PALETTE.iter().enumerate() {
-        let toggle = palette_swatch(named.id, named.label, named.color);
+        let toggle = palette_swatch(named.id, &named.label(), named.color);
         let weak_popover = popover.downgrade();
         toggle.connect_clicked(move |_| {
             if let Some(popover) = weak_popover.upgrade() {
@@ -756,10 +775,10 @@ fn palette_button(editor: &Rc<Editor>) -> gtk::MenuButton {
     custom_swatch.set_visible(false);
     let custom_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     custom_box.append(&custom_swatch);
-    custom_box.append(&gtk::Label::with_mnemonic("_Benutzerdefinierte Farbe …"));
+    custom_box.append(&gtk::Label::with_mnemonic(&gettext("_Custom Color…")));
     let custom = gtk::Button::new();
     custom.set_child(Some(&custom_box));
-    custom.set_tooltip_text(Some("Eine beliebige Farbe im Farbdialog wählen"));
+    custom.set_tooltip_text(Some(&gettext("Choose any color in the color dialog")));
     custom.set_action_name(Some("win.color-custom"));
     custom.add_css_class("qs-custom");
 
@@ -797,7 +816,7 @@ fn palette_button(editor: &Rc<Editor>) -> gtk::MenuButton {
     button.set_popover(Some(&popover));
     button.set_focus_on_click(false);
     button.add_css_class("qs-palette-button");
-    button.update_property(&[gtk::accessible::Property::Label("Farbe")]);
+    button.update_property(&[gtk::accessible::Property::Label(&gettext("Color"))]);
     editor.palette.replace(Some(Palette {
         button: button.clone(),
         popover,
@@ -820,7 +839,7 @@ fn choose_custom_color(editor: &Rc<Editor>) {
         palette.popover.popdown();
     }
     let window = gtk::Window::builder()
-        .title("Benutzerdefinierte Farbe")
+        .title(gettext("Custom Color"))
         .transient_for(&editor.window)
         .modal(true)
         .resizable(false)
@@ -841,11 +860,16 @@ fn choose_custom_color(editor: &Rc<Editor>) {
         chooser.set_show_editor(true);
         chooser
     };
-    let hint = gtk::Label::new(Some("Farbton und Farbfeld wählen oder „#RRGGBB“ eingeben."));
+    let hint = gtk::Label::new(Some(&gettext(
+        "Choose a hue and a shade or type “#RRGGBB”.",
+    )));
     hint.set_xalign(0.0);
     hint.add_css_class("qs-hint");
-    let cancel = ui::button("Abbrechen", &["process-stop", "window-close"]);
-    let apply = ui::button("Übernehmen", &["dialog-ok", "dialog-apply", "gtk-apply"]);
+    let cancel = ui::button(&gettext("Cancel"), &["process-stop", "window-close"]);
+    let apply = ui::button(
+        &gettext("Apply"),
+        &["dialog-ok", "dialog-apply", "gtk-apply"],
+    );
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     buttons.set_halign(gtk::Align::End);
     buttons.append(&cancel);
@@ -878,7 +902,10 @@ fn choose_custom_color(editor: &Rc<Editor>) {
                     )
                     .is_ok()
                     {
-                        editor.say(&format!("Farbe gewählt: {}", color.label()));
+                        editor.say(&gettext_f(
+                            "Color chosen: {color}",
+                            &[("color", &color.label())],
+                        ));
                     }
                 }
                 _ => println!("querencia-screenshot: Farbdialog abgebrochen"),
@@ -997,7 +1024,7 @@ fn stroke_button(editor: &Rc<Editor>) -> gtk::MenuButton {
         cr.fill().ok();
     });
 
-    let heading = gtk::Label::new(Some("Strichstärke"));
+    let heading = gtk::Label::new(Some(&gettext("Line Width")));
     heading.set_xalign(0.0);
     heading.add_css_class("qs-stroke-heading");
     let scale = gtk::Scale::with_range(
@@ -1013,7 +1040,9 @@ fn stroke_button(editor: &Rc<Editor>) -> gtk::MenuButton {
     scale.set_value(editor.width.get().pixels());
     scale.set_size_request(200, -1);
     scale.set_hexpand(true);
-    scale.update_property(&[gtk::accessible::Property::Label("Strichstärke in Pixeln")]);
+    scale.update_property(&[gtk::accessible::Property::Label(&gettext(
+        "Line width in pixels",
+    ))]);
     let value = gtk::Label::new(Some(&editor.width.get().label()));
     value.set_width_chars(5);
     value.set_xalign(1.0);
@@ -1086,7 +1115,7 @@ fn stroke_button(editor: &Rc<Editor>) -> gtk::MenuButton {
     button.set_popover(Some(&popover));
     button.set_focus_on_click(false);
     button.add_css_class("qs-stroke-button");
-    button.update_property(&[gtk::accessible::Property::Label("Strichstärke")]);
+    button.update_property(&[gtk::accessible::Property::Label(&gettext("Line Width"))]);
     editor.stroke.replace(Some(Stroke {
         button: button.clone(),
         current,
@@ -1184,27 +1213,29 @@ fn separator() -> gtk::Separator {
 fn toolbar(editor: &Rc<Editor>) -> gtk::Box {
     let bar = gtk::Box::new(gtk::Orientation::Horizontal, 2);
     bar.add_css_class("qs-toolbar");
+    // TRANSLATORS: Werkzeugleiste des Editors; kurze Beschriftungen, damit
+    // sie auch auf 1024 Pixel breiten Bildschirmen hineinpasst.
     bar.append(&action_button(
-        Some("Neu"),
+        Some(&gettext("New")),
         &["applets-screenshooter", "camera-photo", "document-new"],
         None,
-        "Neue Aufnahme (Strg+N)",
+        &gettext("New screenshot (Ctrl+N)"),
         "win.new",
     ));
     bar.append(&action_button(
-        Some("Speichern"),
+        Some(&gettext("Save")),
         &["document-save"],
         None,
-        "Bild mit Markierungen als PNG speichern (Strg+S)",
+        &gettext("Save the picture with annotations as PNG (Ctrl+S)"),
         "win.save",
     ));
     // Kurze Beschriftung, damit die Werkzeugleiste auch auf 1024 Pixel
     // breiten Bildschirmen ganz hineinpasst; der Hinweis nennt das Ziel.
     bar.append(&action_button(
-        Some("Kopieren"),
+        Some(&gettext("Copy")),
         &["edit-copy"],
         None,
-        "Bild mit Markierungen in die Zwischenablage kopieren (Strg+C)",
+        &gettext("Copy the picture with annotations to the clipboard (Ctrl+C)"),
         "win.copy",
     ));
     bar.append(&separator());
@@ -1212,28 +1243,28 @@ fn toolbar(editor: &Rc<Editor>) -> gtk::Box {
         None,
         &["edit-undo"],
         Some(Fallback::Undo),
-        "Rückgängig: letzte Markierung entfernen (Strg+Z)",
+        &gettext("Undo: remove the last annotation (Ctrl+Z)"),
         "win.undo",
     ));
     bar.append(&action_button(
         None,
         &["edit-redo"],
         Some(Fallback::Redo),
-        "Wiederholen (Strg+Umschalt+Z)",
+        &gettext("Redo (Ctrl+Shift+Z)"),
         "win.redo",
     ));
     bar.append(&action_button(
         None,
         &["edit-clear-all", "edit-clear", "edit-delete"],
         Some(Fallback::Clear),
-        "Alle Markierungen entfernen – das Bildschirmfoto bleibt",
+        &gettext("Remove all annotations – the screenshot stays"),
         "win.clear",
     ));
     bar.append(&separator());
     for tool in Tool::ALL {
         bar.append(&radio(
             &tool_icon(tool),
-            tool.tooltip(),
+            &tool.tooltip(),
             "win.tool",
             tool.id(),
         ));
@@ -1243,10 +1274,10 @@ fn toolbar(editor: &Rc<Editor>) -> gtk::Box {
     bar.append(&separator());
     bar.append(&stroke_button(editor));
     bar.append(&separator());
-    let fit = gtk::ToggleButton::with_label("Einpassen");
-    fit.set_tooltip_text(Some(
-        "Bild ins Fenster einpassen; ausgeschaltet: Originalgröße mit Bildlaufleisten",
-    ));
+    let fit = gtk::ToggleButton::with_label(&gettext("Fit"));
+    fit.set_tooltip_text(Some(&gettext(
+        "Fit the picture to the window; off: original size with scroll bars",
+    )));
     fit.set_action_name(Some("win.fit"));
     fit.set_focus_on_click(false);
     fit.add_css_class("qs-tool");
@@ -1495,7 +1526,7 @@ fn begin_text(editor: &Rc<Editor>, at: Point) {
         .set_margin_top((y - dy + line + 4.0).max(0.0) as i32);
     editor.text_box.set_visible(true);
     editor.entry.grab_focus();
-    editor.say("Text eingeben – Eingabetaste übernimmt, Esc verwirft");
+    editor.say(&gettext("Type text – Enter confirms, Esc discards"));
     editor.refresh();
 }
 
@@ -1514,7 +1545,7 @@ fn finish_text(editor: &Rc<Editor>, commit: bool) {
         }
         editor.message.replace(String::new());
     } else {
-        editor.say("Text verworfen");
+        editor.say(&gettext("Text discarded"));
     }
     editor.refresh();
     editor.area.grab_focus();
@@ -1562,7 +1593,7 @@ fn connect_keys(editor: &Rc<Editor>) {
             editor.current.replace(None);
             editor.drag_start.set(None);
             editor.drag.set_state(gtk::EventSequenceState::Denied);
-            editor.say("Abgebrochen");
+            editor.say(&gettext("Cancelled"));
             editor.area.queue_draw();
             return glib::Propagation::Stop;
         }
@@ -1582,15 +1613,27 @@ fn connect_close(editor: &Rc<Editor>) {
             return glib::Propagation::Proceed;
         }
         let weak = Rc::downgrade(&editor);
+        let message = gettext("Changes are not saved");
+        let detail = gettext(
+            "The annotations have changed since they were last saved or were never saved. Closing loses these changes.",
+        );
+        // TRANSLATORS: Rückfrage beim Schließen (Reihenfolge und Wortlaut wie
+        // Querencia Editor / gedit 2.30); Zugriffstasten verschieden halten.
+        let buttons = [
+            gettext("Close _without Saving"),
+            gettext("_Cancel"),
+            gettext("_Save…"),
+        ];
+        let buttons: Vec<&str> = buttons.iter().map(String::as_str).collect();
         instant::ask(
             window,
             instant::Question {
                 title: "Querencia Screenshot",
-                message: "Änderungen nicht gespeichert",
-                detail: "Die Markierungen wurden seit dem letzten Speichern geändert oder noch nie gespeichert. Beim Schließen gehen diese Änderungen verloren.",
+                message: &message,
+                detail: &detail,
                 icon: &["dialog-warning"],
                 // Reihenfolge wie Querencia Editor (gedit 2.30).
-                buttons: &["_Ohne Speichern schließen", "_Abbrechen", "_Speichern …"],
+                buttons: &buttons,
                 cancel: 1,
                 default: 2,
             },
@@ -1608,7 +1651,7 @@ fn connect_close(editor: &Rc<Editor>) {
                         editor.close_after_save.set(true);
                         save(&editor);
                     }
-                    _ => editor.say("Schließen abgebrochen"),
+                    _ => editor.say(&gettext("Closing cancelled")),
                 }
             },
         );
@@ -1621,14 +1664,18 @@ fn confirm_clear(editor: &Rc<Editor>) {
         return;
     }
     let weak = Rc::downgrade(editor);
+    let message = gettext("Remove all annotations?");
+    let detail = gettext("The screenshot itself is kept. Ctrl+Z brings the annotations back.");
+    let buttons = [gettext("_Cancel"), gettext("_Remove")];
+    let buttons: Vec<&str> = buttons.iter().map(String::as_str).collect();
     instant::ask(
         &editor.window,
         instant::Question {
             title: "Querencia Screenshot",
-            message: "Alle Markierungen entfernen?",
-            detail: "Das Bildschirmfoto selbst bleibt erhalten. Mit Strg+Z lassen sich die Markierungen zurückholen.",
+            message: &message,
+            detail: &detail,
             icon: &["dialog-question", "dialog-warning"],
-            buttons: &["_Abbrechen", "_Entfernen"],
+            buttons: &buttons,
             cancel: 0,
             default: 1,
         },
@@ -1637,7 +1684,7 @@ fn confirm_clear(editor: &Rc<Editor>) {
                 return;
             };
             if answer == 1 && editor.marks.borrow_mut().clear() {
-                editor.say("Alle Markierungen entfernt");
+                editor.say(&gettext("All annotations removed"));
             }
             editor.refresh();
         },
@@ -1650,7 +1697,10 @@ fn save(editor: &Rc<Editor>) {
     let png = match editor.compose() {
         Ok(png) => png,
         Err(error) => {
-            editor.say(&format!("Nicht gespeichert: {error}"));
+            editor.say(&gettext_f(
+                "Not saved: {error}",
+                &[("error", &error.to_string())],
+            ));
             return;
         }
     };
@@ -1658,10 +1708,12 @@ fn save(editor: &Rc<Editor>) {
     let description = if count == 0 {
         editor.description.clone()
     } else {
-        format!(
-            "{} mit {count} Markierung{}",
-            editor.description,
-            if count == 1 { "" } else { "en" }
+        ngettext_f(
+            // TRANSLATORS: {description} beschreibt die Aufnahme („Screen“).
+            "{description} with {n} annotation",
+            "{description} with {n} annotations",
+            count,
+            &[("description", &editor.description)],
         )
     };
     let weak = Rc::downgrade(editor);
@@ -1685,9 +1737,10 @@ fn save(editor: &Rc<Editor>) {
                 // wurde (der Dialog ist modal, der Stand also unverändert).
                 editor.marks.borrow_mut().mark_saved_as(snapshot.clone());
                 // Die Zeile „Gespeichert: …“ im Protokoll schreibt der Dialog.
-                editor
-                    .message
-                    .replace(format!("Gespeichert: {}", path.display()));
+                editor.message.replace(gettext_f(
+                    "Saved: {path}",
+                    &[("path", &path.display().to_string())],
+                ));
                 editor.update_status();
                 if editor.close_after_save.get() {
                     editor.force_close.set(true);
@@ -1713,7 +1766,10 @@ fn copy(editor: &Rc<Editor>) {
     let png = match editor.compose() {
         Ok(png) => png,
         Err(error) => {
-            editor.say(&format!("Nicht kopiert: {error}"));
+            editor.say(&gettext_f(
+                "Not copied: {error}",
+                &[("error", &error.to_string())],
+            ));
             return;
         }
     };
@@ -1722,17 +1778,17 @@ fn copy(editor: &Rc<Editor>) {
         match gdk::Texture::from_bytes(&glib::Bytes::from(png.bytes())) {
             Ok(texture) => {
                 editor.window.clipboard().set_texture(&texture);
-                editor.say(
-                    "Kopiert über GTK (wl-copy fehlt) – gilt nur, solange der Editor offen ist",
-                );
+                editor.say(&gettext(
+                    "Copied through GTK (wl-copy is missing) – valid only while the editor is open",
+                ));
             }
-            Err(_) => editor.say("Kopieren nicht möglich: wl-copy fehlt"),
+            Err(_) => editor.say(&gettext("Cannot copy: wl-copy is missing")),
         }
         return;
     }
     editor.busy.set(true);
     editor.refresh();
-    editor.say("Kopiere in die Zwischenablage …");
+    editor.say(&gettext("Copying to the clipboard…"));
     let weak = Rc::downgrade(editor);
     glib::spawn_future_local(async move {
         let outcome =
@@ -1742,12 +1798,14 @@ fn copy(editor: &Rc<Editor>) {
         };
         editor.busy.set(false);
         match outcome {
-            Ok(Ok(())) => editor.say(&format!(
-                "In die Zwischenablage kopiert (image/png, {count} Markierung{})",
-                if count == 1 { "" } else { "en" }
+            Ok(Ok(())) => editor.say(&ngettext_f(
+                "Copied to the clipboard (image/png, {n} annotation)",
+                "Copied to the clipboard (image/png, {n} annotations)",
+                count,
+                &[],
             )),
             Ok(Err(error)) => editor.say(&error.to_string()),
-            Err(_) => editor.say("Kopieren wurde unerwartet beendet"),
+            Err(_) => editor.say(&gettext("Copying ended unexpectedly")),
         }
         editor.refresh();
     });

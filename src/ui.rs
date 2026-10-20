@@ -12,7 +12,12 @@ use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use gtk::{gdk, gio, glib, graphene, gsk, prelude::*};
 
-use crate::{cli::Target, editor, instant, runner, toplevel};
+use crate::{
+    cli::Target,
+    editor,
+    i18n::{gettext, gettext_f},
+    instant, runner, toplevel,
+};
 
 /// Zeit nach dem Unmap, die dem Compositor für sein nächstes Bild bleibt;
 /// Ergänzung zum Unmap-Signal, nicht dessen Ersatz.
@@ -44,33 +49,49 @@ const CHOOSER_CLASS: &str = "qs-chooser";
 
 struct Choice {
     target: Target,
-    label: &'static str,
-    detail: &'static str,
     icons: &'static [&'static str],
 }
 
 const CHOICES: [Choice; 3] = [
     Choice {
         target: Target::Screen,
-        label: "_Gesamten Bildschirm aufnehmen",
-        detail: "Alles, was auf dem Bildschirm zu sehen ist (alle Bildschirme in einem Bild).",
         icons: &["video-display", "computer", "applets-screenshooter"],
     },
     Choice {
         target: Target::Window,
-        label: "_Fenster einrahmen",
-        detail: "Das Fenster mit der Maus einrahmen: labwc meldet keine Fenstergrenzen, \
-                 eine automatische Fenstererkennung gibt es deshalb nicht. \
-                 Ein Vollbildfenster wird direkt aufgenommen.",
         icons: &["window-new", "preferences-system-windows", "view-restore"],
     },
     Choice {
         target: Target::Area,
-        label: "_Bereich auswählen",
-        detail: "Mit gedrückter Maustaste ein Rechteck aufziehen. Esc bricht ab.",
         icons: &["select-rectangular", "edit-select-all", "object-select"],
     },
 ];
+
+impl Choice {
+    /// Beschriftung mit Zugriffstaste und Erklärung darunter (übersetzt).
+    fn texts(&self) -> (String, String) {
+        // TRANSLATORS: Auswahlfenster „What would you like to capture?“; die
+        // Zugriffstasten der drei Beschriftungen müssen verschieden sein.
+        match self.target {
+            Target::Screen => (
+                gettext("Grab the whole _screen"),
+                gettext("Everything that can be seen on the screen (all screens in one picture)."),
+            ),
+            Target::Window => (
+                gettext("_Frame a window"),
+                gettext(
+                    "Frame the window with the mouse: labwc reports no window borders, \
+                     so there is no automatic window detection. \
+                     A full-screen window is captured directly.",
+                ),
+            ),
+            Target::Area => (
+                gettext("Select an _area"),
+                gettext("Drag a rectangle while holding the mouse button. Esc cancels."),
+            ),
+        }
+    }
+}
 
 struct State {
     window: gtk::ApplicationWindow,
@@ -151,16 +172,16 @@ pub fn present(application: &gtk::Application) {
     root.set_margin_bottom(10);
     root.set_margin_start(12);
     root.set_margin_end(12);
-    let heading = gtk::Label::new(Some("Was möchten Sie aufnehmen?"));
+    let heading = gtk::Label::new(Some(&gettext("What would you like to capture?")));
     heading.set_xalign(0.0);
     heading.add_css_class("qs-heading");
     root.append(&heading);
 
     let choices = gtk::Box::new(gtk::Orientation::Vertical, 6);
     root.append(&choices);
-    let status = gtk::Label::new(Some(
-        "Nach der Aufnahme öffnet sich der Editor zum Markieren, Speichern und Kopieren.",
-    ));
+    let status = gtk::Label::new(Some(&gettext(
+        "After the capture the editor opens for annotating, saving and copying.",
+    )));
     status.add_css_class("qs-status");
     status.set_xalign(0.0);
     status.set_wrap(true);
@@ -170,7 +191,7 @@ pub fn present(application: &gtk::Application) {
 
     let bottom = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     bottom.set_halign(gtk::Align::End);
-    let cancel = button("Abbrechen", &["process-stop", "window-close"]);
+    let cancel = button(&gettext("Cancel"), &["process-stop", "window-close"]);
     bottom.append(&cancel);
     root.append(&bottom);
     window.set_child(Some(&root));
@@ -210,9 +231,9 @@ pub fn present(application: &gtk::Application) {
 
     let missing = crate::capture::missing_tools(&runner::SystemRunner);
     if !missing.is_empty() {
-        state.status.set_text(&format!(
-            "Fehlende Programme: {}. Fenster und Bereich brauchen slurp, Kopieren braucht wl-copy (Paket wl-clipboard).",
-            missing.join(", ")
+        state.status.set_text(&gettext_f(
+            "Missing programs: {programs}. Window and area need slurp, copying needs wl-copy (package wl-clipboard).",
+            &[("programs", &missing.join(", "))],
         ));
     }
     window.present();
@@ -242,10 +263,11 @@ fn choice_button(choice: &Choice) -> gtk::Button {
         content.append(&image);
     }
     let texts = gtk::Box::new(gtk::Orientation::Vertical, 2);
-    let label = gtk::Label::with_mnemonic(choice.label);
+    let (title, explanation) = choice.texts();
+    let label = gtk::Label::with_mnemonic(&title);
     label.set_xalign(0.0);
     label.add_css_class("qs-choice-title");
-    let detail = gtk::Label::new(Some(choice.detail));
+    let detail = gtk::Label::new(Some(&explanation));
     detail.set_xalign(0.0);
     detail.set_wrap(true);
     detail.set_max_width_chars(52);
@@ -331,13 +353,13 @@ fn run_capture(state: Rc<State>, target: Target) {
             }
             Ok(Ok(None)) => {
                 println!("querencia-screenshot: abgebrochen – nichts aufgenommen");
-                "Abgebrochen – keine Aufnahme.".to_owned()
+                gettext("Cancelled – nothing captured.")
             }
             Ok(Err(error)) => {
                 eprintln!("querencia-screenshot: Fehler: {error}");
                 error.to_string()
             }
-            Err(_) => "Die Aufnahme wurde unerwartet beendet.".to_owned(),
+            Err(_) => gettext("The capture ended unexpectedly."),
         };
         state.window.set_visible(true);
         state.window.present();

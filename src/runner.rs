@@ -15,6 +15,8 @@ use std::{
     thread,
 };
 
+use crate::i18n::{gettext, gettext_f};
+
 /// Obergrenze für stdout (das PNG eines großen Bildschirms bleibt weit darunter).
 pub const MAX_OUTPUT_BYTES: usize = 64 * 1024 * 1024;
 /// Obergrenze für stderr; Fehlermeldungen sind kurz.
@@ -52,20 +54,22 @@ pub enum RunError {
 impl fmt::Display for RunError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Missing(program) => write!(f, "Programm „{program}“ ist nicht installiert"),
-            Self::Spawn(program, error) => {
-                write!(f, "„{program}“ konnte nicht gestartet werden: {error}")
-            }
-            Self::Oversized(program) => {
-                write!(
-                    f,
-                    "Ausgabe von „{program}“ ist zu groß; Programm wurde beendet"
-                )
-            }
-            Self::Read(program, error) => write!(
-                f,
-                "Ausgabe von „{program}“ konnte nicht gelesen werden ({error}); Programm wurde beendet"
-            ),
+            Self::Missing(program) => f.write_str(&gettext_f(
+                "The program “{program}” is not installed",
+                &[("program", program)],
+            )),
+            Self::Spawn(program, error) => f.write_str(&gettext_f(
+                "“{program}” could not be started: {error}",
+                &[("program", program), ("error", error)],
+            )),
+            Self::Oversized(program) => f.write_str(&gettext_f(
+                "The output of “{program}” is too large; the program was stopped",
+                &[("program", program)],
+            )),
+            Self::Read(program, error) => f.write_str(&gettext_f(
+                "The output of “{program}” could not be read ({error}); the program was stopped",
+                &[("program", program), ("error", error)],
+            )),
         }
     }
 }
@@ -172,7 +176,8 @@ impl SystemRunner {
                 Err(_) => {
                     failure = Some(RunError::Read(
                         program.to_owned(),
-                        "Lesethread wurde unerwartet beendet".to_owned(),
+                        // TRANSLATORS: steht als {error} in „The output of … could not be read ({error})“.
+                        gettext("the reading thread ended unexpectedly"),
                     ));
                 }
             }
@@ -546,7 +551,7 @@ mod tests {
         let error = RunError::Read("grim".into(), "stderr: Rohr defekt".into());
         assert_eq!(
             error.to_string(),
-            "Ausgabe von „grim“ konnte nicht gelesen werden (stderr: Rohr defekt); Programm wurde beendet"
+            "The output of “grim” could not be read (stderr: Rohr defekt); the program was stopped"
         );
     }
 

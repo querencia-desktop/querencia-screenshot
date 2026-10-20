@@ -13,6 +13,7 @@ mod cli;
 mod clipboard;
 mod editor;
 mod geometry;
+mod i18n;
 mod instant;
 mod render;
 mod runner;
@@ -23,9 +24,12 @@ mod ui;
 
 use gtk::{gio, glib, prelude::*};
 
+use crate::i18n::gettext_f;
+
 pub const APPLICATION_ID: &str = "org.querencia.Screenshot";
 
 fn main() -> glib::ExitCode {
+    i18n::init();
     let mut args = std::env::args_os();
     let program = args
         .next()
@@ -84,18 +88,39 @@ fn unique_less() -> gtk::Application {
 /// neuen Namen daneben vor („…-markiert.png“), nie die Datei selbst.
 fn open_file(application: &gtk::Application, path: &std::path::Path) {
     let loaded = std::fs::read(path)
-        .map_err(|error| format!("„{}“ kann nicht gelesen werden: {error}", path.display()))
+        .map_err(|error| {
+            gettext_f(
+                "Cannot read “{path}”: {error}",
+                &[
+                    ("path", &path.display().to_string()),
+                    ("error", &error.to_string()),
+                ],
+            )
+        })
         .and_then(|bytes| {
-            screenshot::Png::new(bytes).map_err(|error| format!("„{}“: {error}", path.display()))
+            screenshot::Png::new(bytes).map_err(|error| {
+                gettext_f(
+                    // TRANSLATORS: Datei und Grund, z. B. „“a.png”: The capture is not a PNG image“.
+                    "“{path}”: {error}",
+                    &[
+                        ("path", &path.display().to_string()),
+                        ("error", &error.to_string()),
+                    ],
+                )
+            })
         });
     match loaded {
         Ok(png) => editor::open(
             application,
             editor::Source {
                 png,
-                description: format!(
-                    "Datei „{}“",
-                    path.file_name().unwrap_or_default().to_string_lossy()
+                description: gettext_f(
+                    // TRANSLATORS: Beschreibung einer geöffneten Datei (Speicherdialog).
+                    "File “{name}”",
+                    &[(
+                        "name",
+                        &path.file_name().unwrap_or_default().to_string_lossy(),
+                    )],
                 ),
                 suggested_name: Some(editor::marked_name(path)),
                 suggested_folder: path

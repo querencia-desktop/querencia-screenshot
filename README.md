@@ -71,6 +71,30 @@ nach dem `unmap`-Signal plus einer kurzen Karenz für das nächste Compositor-Bi
 `grim` (Pflicht), `slurp` (Fenster/Bereich), `wl-clipboard` (Kopieren).
 Fehlende Programme werden gemeldet; nichts wird automatisch installiert.
 
+## Sprachen
+
+Seit 0.2.7 sind die Texte der Oberfläche englisch im Code (msgid) und deutsch
+in `po/de.po`, über GNU gettext wie bei GNOME und Debian (Muster: Querencia
+Editor 0.2.0). Der deutsche Wortlaut ist der bisherige. Übersetzt sind
+Auswahlfenster, Editor (Menüs, Werkzeugleiste, Statuszeile, Rückfragen),
+Speicher- und Ordnerdialog, Fehlermeldungen und die Desktop-Datei
+(`data/org.querencia.Screenshot.desktop.in` → `…desktop` mit `[de]`). Nicht
+übersetzt: der Programmname im Fenstertitel, die Kommandozeilenhilfe
+(`--help`, vor dem GTK-Start), reine Protokollzeilen auf stdout/stderr,
+Dateinamen (`Screenshot-…png`, `…-markiert.png`). Statusmeldungen des Editors
+und Namen von Farben und Werkzeugen stehen im Protokoll in der Sprache der
+Oberfläche.
+
+- Sprachwahl über `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`; ohne deutschen
+  Katalog erscheint Englisch. `LANGUAGE` wirkt nicht bei der Locale `C`.
+- Kataloge `<lang>/LC_MESSAGES/querencia-screenshot.mo`: zuerst
+  `<Ordner der Binary>/share/locale`, dann `<Ordner der Binary>/../share/locale`,
+  zuletzt `/usr/share/locale`; `QUERENCIA_SCREENSHOT_LOCALEDIR` setzt den Ordner.
+- Zugriffstasten je Sprache: deutsch wie bisher (Alt+N/O/Z/A/S im
+  Speicherdialog), englisch nach GNOME 2 (Alt+N/F/L/C/S).
+- po-Pflege mit `werkzeug/i18n.py` (`pot`, `update`, `desktop`, `mo <ziel>`,
+  `pruefen`), wie im Editor; `.mo` inhaltsgleich mit GNU `msgfmt`.
+
 ## Bauen und prüfen
 
 ```bash
@@ -78,15 +102,19 @@ cargo fmt --all --check
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
 cargo build --release --locked
+python3 werkzeug/i18n.py pruefen     # Katalog vollständig, .pot aktuell
 ```
 
 Die Tests brauchen kein Display und starten keine Aufnahme; externe Programme werden
 über `runner::CommandRunner` ersetzt; `render`-Tests prüfen exportierte Pixel.
+Ohne gebundenen Katalog laufen sie englisch; `german_catalog_is_complete`
+prüft, dass jede msgid in `po/de.po` übersetzt ist.
 
 ## Struktur
 
 ```
 src/main.rs        GtkApplication, Kommandozeile
+src/i18n.rs        gettext: Textdomäne, Katalogsuche, Platzhalter, Plural
 src/cli.rs         Optionen
 src/ui.rs          Auswahlfenster, Stil, Symbolthema
 src/instant.rs     Sofortaufnahme, Speicherdialog
@@ -101,6 +129,10 @@ src/screenshot.rs  Png: Signaturprüfung, Größenlimit, Abmessungen
 src/storage.rs     Zielordner, Dateinamen, privates Speichern ohne Überschreiben
 src/clipboard.rs   wl-copy mit image/png
 src/style.css      helle, kompakte, klassische Optik
+po/                querencia-screenshot.pot, de.po, LINGUAS
+werkzeug/i18n.py   po-Pflege (pot, update, desktop, mo, pruefen)
+data/              Desktop-Vorlage (.in, englisch), erzeugte Desktop-Datei, MetaInfo
+integration/       Integration je Version (pruefen|aktivieren|zurueck), Probe
 ```
 
 Symbole: GNOME Human, wenn installiert und nur GTKs Standardthema eingestellt

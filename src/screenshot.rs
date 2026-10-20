@@ -4,6 +4,8 @@
 
 use std::fmt;
 
+use crate::i18n::{gettext, gettext_f};
+
 pub const MIME_TYPE: &str = "image/png";
 const PNG_SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n'];
 /// Oberhalb dieser Größe wird eine Aufnahme verworfen statt weitergereicht.
@@ -24,13 +26,12 @@ pub enum PngError {
 impl fmt::Display for PngError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Empty => write!(f, "Die Aufnahme ist leer"),
-            Self::NotPng => write!(f, "Die Aufnahme ist kein PNG-Bild"),
-            Self::TooLarge(bytes) => write!(
-                f,
-                "Die Aufnahme ist zu groß ({} MiB)",
-                bytes / (1024 * 1024)
-            ),
+            Self::Empty => f.write_str(&gettext("The capture is empty")),
+            Self::NotPng => f.write_str(&gettext("The capture is not a PNG image")),
+            Self::TooLarge(bytes) => f.write_str(&gettext_f(
+                "The capture is too large ({size} MiB)",
+                &[("size", &(bytes / (1024 * 1024)).to_string())],
+            )),
         }
     }
 }

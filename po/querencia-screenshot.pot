@@ -1,0 +1,757 @@
+# Übersetzungsvorlage für Querencia Screenshot.
+# Copyright (C) 2026 Querencia Desktop contributors
+# Diese Datei steht unter derselben Lizenz wie Querencia Screenshot (GPL-3.0-or-later).
+# Erzeugt mit werkzeug/i18n.py pot – nicht von Hand bearbeiten.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: querencia-screenshot\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#. TRANSLATORS: Desktop-Datei, Schlüssel Name
+#: data/org.querencia.Screenshot.desktop.in:12
+msgid "Take Screenshot"
+msgstr ""
+
+#. TRANSLATORS: Desktop-Datei, Schlüssel GenericName
+#: data/org.querencia.Screenshot.desktop.in:13
+msgid "Screenshot"
+msgstr ""
+
+#. TRANSLATORS: Desktop-Datei, Schlüssel Comment
+#: data/org.querencia.Screenshot.desktop.in:14
+msgid "Take a screenshot of the screen, a window or an area and annotate it"
+msgstr ""
+
+#. TRANSLATORS: Desktop-Datei, Schlüssel Keywords (Liste, Einträge mit ; trennen und abschließen)
+#: data/org.querencia.Screenshot.desktop.in:20
+msgid "Screenshot;Capture;Screen;"
+msgstr ""
+
+#. TRANSLATORS: Werkzeuge des Editors (Menü Werkzeuge, Statuszeile).
+#: src/annotation.rs:58
+msgid "Pen"
+msgstr ""
+
+#: src/annotation.rs:59
+msgid "Circle/Ellipse"
+msgstr ""
+
+#: src/annotation.rs:60
+msgid "Rectangle"
+msgstr ""
+
+#: src/annotation.rs:61
+msgid "Arrow"
+msgstr ""
+
+#. TRANSLATORS: Werkzeug „Text“ des Editors.
+#: src/annotation.rs:63
+msgid "Text"
+msgstr ""
+
+#: src/annotation.rs:82
+msgid "Pen (P): draw freely while holding the mouse button"
+msgstr ""
+
+#: src/annotation.rs:83
+msgid ""
+"Circle/Ellipse (E): drag to circle something – hold Shift for a round circle"
+msgstr ""
+
+#: src/annotation.rs:86
+msgid "Rectangle (R): drag – hold Shift for a square"
+msgstr ""
+
+#: src/annotation.rs:87
+msgid "Arrow (A): drag from the start to the tip"
+msgstr ""
+
+#: src/annotation.rs:88
+msgid "Text (T): click on the picture and type, Enter confirms"
+msgstr ""
+
+#: src/annotation.rs:114
+msgid "Red"
+msgstr ""
+
+#: src/annotation.rs:115
+msgid "Orange"
+msgstr ""
+
+#: src/annotation.rs:116
+msgid "Yellow"
+msgstr ""
+
+#: src/annotation.rs:117
+msgid "Green"
+msgstr ""
+
+#: src/annotation.rs:118
+msgid "Blue"
+msgstr ""
+
+#: src/annotation.rs:119
+msgid "Violet"
+msgstr ""
+
+#: src/annotation.rs:120
+msgid "Black"
+msgstr ""
+
+#: src/annotation.rs:121
+msgid "White"
+msgstr ""
+
+#. TRANSLATORS: {hex} ist „#RRGGBB“.
+#: src/annotation.rs:235
+#, no-c-format
+msgid "custom color {hex}"
+msgstr ""
+
+#: src/annotation.rs:284
+msgid "Thin"
+msgstr ""
+
+#: src/annotation.rs:285
+msgid "Medium"
+msgstr ""
+
+#: src/annotation.rs:286
+msgid "Thick"
+msgstr ""
+
+#: src/capture.rs:43
+#, no-c-format
+msgid "The capture failed (status {status})"
+msgstr ""
+
+#. TRANSLATORS: {message} ist die Fehlermeldung von grim.
+#: src/capture.rs:47
+#, no-c-format
+msgid "The capture failed: {message}"
+msgstr ""
+
+#: src/capture.rs:106
+#, no-c-format
+msgid "invalid output name {name}"
+msgstr ""
+
+#: src/clipboard.rs:25
+#, no-c-format
+msgid "Copying failed (status {status})"
+msgstr ""
+
+#. TRANSLATORS: {message} ist die Fehlermeldung von wl-copy.
+#: src/clipboard.rs:29
+#, no-c-format
+msgid "Copying failed: {message}"
+msgstr ""
+
+#. TRANSLATORS: „F“ ist die feste Taste für die Farbpalette.
+#: src/editor.rs:173
+#, no-c-format
+msgid "Color: {color} – open the color palette (F)"
+msgstr ""
+
+#. TRANSLATORS: „S“ ist die feste Taste für die Strichstärke.
+#: src/editor.rs:185
+#, no-c-format
+msgid "Line width: {width} – open the selection (S)"
+msgstr ""
+
+#: src/editor.rs:212
+msgid "click on the picture and type text"
+msgstr ""
+
+#: src/editor.rs:213
+msgid "draw on the picture while holding the mouse button"
+msgstr ""
+
+#: src/editor.rs:214
+msgid "drag on the picture while holding the mouse button"
+msgstr ""
+
+#. TRANSLATORS: Statuszeile des Editors: Bildgröße, Zoom, Werkzeug mit Hinweis, Farbe, Strichstärke, Zahl der Markierungen.
+#: src/editor.rs:217
+#, no-c-format
+msgid ""
+"{width} × {height} pixels · {zoom} % · {tool}: {hint} ({color}, {stroke}) · {n} annotation"
+msgid_plural ""
+"{width} × {height} pixels · {zoom} % · {tool}: {hint} ({color}, {stroke}) · {n} annotations"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: Fenstertitel des Editors; der Programmname bleibt.
+#: src/editor.rs:271
+msgid "Querencia Screenshot – Edit"
+msgstr ""
+
+#: src/editor.rs:295
+msgid "Type text"
+msgstr ""
+
+#: src/editor.rs:296
+msgid "Enter confirms, Esc discards"
+msgstr ""
+
+#: src/editor.rs:435
+msgid "Undone"
+msgstr ""
+
+#: src/editor.rs:441
+msgid "Redone"
+msgstr ""
+
+#. TRANSLATORS: Menüs des Editors (Wortschatz gedit 2.30); Zugriffstasten je Menü und in der Menüleiste verschieden halten.
+#: src/editor.rs:546
+msgid "_New Screenshot"
+msgstr ""
+
+#: src/editor.rs:548 src/editor.rs:1625
+msgid "_Save…"
+msgstr ""
+
+#: src/editor.rs:549 src/instant.rs:461
+msgid "Copy to C_lipboard"
+msgstr ""
+
+#. TRANSLATORS: Menü Datei; im Deutschen „S_chließen“ (S ist „Speichern“).
+#: src/editor.rs:553
+msgctxt "File menu"
+msgid "_Close"
+msgstr ""
+
+#: src/editor.rs:555
+msgid "_File"
+msgstr ""
+
+#: src/editor.rs:558
+msgid "_Undo"
+msgstr ""
+
+#: src/editor.rs:559
+msgid "_Redo"
+msgstr ""
+
+#: src/editor.rs:562
+msgid "Remove _All Annotations…"
+msgstr ""
+
+#: src/editor.rs:566
+msgid "_Edit"
+msgstr ""
+
+#: src/editor.rs:584 src/editor.rs:778
+msgid "_Custom Color…"
+msgstr ""
+
+#. TRANSLATORS: Abschnittstitel im Menü Werkzeuge.
+#: src/editor.rs:586 src/editor.rs:819
+msgid "Color"
+msgstr ""
+
+#: src/editor.rs:595
+msgid "Set _Line Width…"
+msgstr ""
+
+#. TRANSLATORS: Abschnittstitel im Menü Werkzeuge.
+#: src/editor.rs:597 src/editor.rs:1027 src/editor.rs:1118
+msgid "Line Width"
+msgstr ""
+
+#: src/editor.rs:598
+msgid "_Tools"
+msgstr ""
+
+#: src/editor.rs:601
+msgid "_Fit to Window"
+msgstr ""
+
+#: src/editor.rs:602
+msgid "_View"
+msgstr ""
+
+#: src/editor.rs:781
+msgid "Choose any color in the color dialog"
+msgstr ""
+
+#: src/editor.rs:842
+msgid "Custom Color"
+msgstr ""
+
+#: src/editor.rs:863
+msgid "Choose a hue and a shade or type “#RRGGBB”."
+msgstr ""
+
+#: src/editor.rs:868 src/ui.rs:194
+msgid "Cancel"
+msgstr ""
+
+#: src/editor.rs:870
+msgid "Apply"
+msgstr ""
+
+#: src/editor.rs:905
+#, no-c-format
+msgid "Color chosen: {color}"
+msgstr ""
+
+#: src/editor.rs:1043
+msgid "Line width in pixels"
+msgstr ""
+
+#: src/editor.rs:1219
+msgid "New"
+msgstr ""
+
+#: src/editor.rs:1222
+msgid "New screenshot (Ctrl+N)"
+msgstr ""
+
+#: src/editor.rs:1226
+msgid "Save"
+msgstr ""
+
+#: src/editor.rs:1229
+msgid "Save the picture with annotations as PNG (Ctrl+S)"
+msgstr ""
+
+#: src/editor.rs:1235
+msgid "Copy"
+msgstr ""
+
+#: src/editor.rs:1238
+msgid "Copy the picture with annotations to the clipboard (Ctrl+C)"
+msgstr ""
+
+#: src/editor.rs:1246
+msgid "Undo: remove the last annotation (Ctrl+Z)"
+msgstr ""
+
+#: src/editor.rs:1253
+msgid "Redo (Ctrl+Shift+Z)"
+msgstr ""
+
+#: src/editor.rs:1260
+msgid "Remove all annotations – the screenshot stays"
+msgstr ""
+
+#: src/editor.rs:1277
+msgid "Fit"
+msgstr ""
+
+#: src/editor.rs:1278
+msgid "Fit the picture to the window; off: original size with scroll bars"
+msgstr ""
+
+#: src/editor.rs:1529
+msgid "Type text – Enter confirms, Esc discards"
+msgstr ""
+
+#: src/editor.rs:1548
+msgid "Text discarded"
+msgstr ""
+
+#: src/editor.rs:1596
+msgid "Cancelled"
+msgstr ""
+
+#: src/editor.rs:1616
+msgid "Changes are not saved"
+msgstr ""
+
+#: src/editor.rs:1617
+msgid ""
+"The annotations have changed since they were last saved or were never saved. Closing loses these changes."
+msgstr ""
+
+#: src/editor.rs:1623
+msgid "Close _without Saving"
+msgstr ""
+
+#: src/editor.rs:1624 src/editor.rs:1669 src/instant.rs:464 src/instant.rs:643
+msgid "_Cancel"
+msgstr ""
+
+#: src/editor.rs:1654
+msgid "Closing cancelled"
+msgstr ""
+
+#: src/editor.rs:1667
+msgid "Remove all annotations?"
+msgstr ""
+
+#: src/editor.rs:1668
+msgid "The screenshot itself is kept. Ctrl+Z brings the annotations back."
+msgstr ""
+
+#: src/editor.rs:1669
+msgid "_Remove"
+msgstr ""
+
+#: src/editor.rs:1687
+msgid "All annotations removed"
+msgstr ""
+
+#: src/editor.rs:1700
+#, no-c-format
+msgid "Not saved: {error}"
+msgstr ""
+
+#. TRANSLATORS: {description} beschreibt die Aufnahme („Screen“).
+#: src/editor.rs:1711
+#, no-c-format
+msgid "{description} with {n} annotation"
+msgid_plural "{description} with {n} annotations"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/editor.rs:1740
+#, no-c-format
+msgid "Saved: {path}"
+msgstr ""
+
+#: src/editor.rs:1769
+#, no-c-format
+msgid "Not copied: {error}"
+msgstr ""
+
+#: src/editor.rs:1781
+msgid ""
+"Copied through GTK (wl-copy is missing) – valid only while the editor is open"
+msgstr ""
+
+#: src/editor.rs:1785
+msgid "Cannot copy: wl-copy is missing"
+msgstr ""
+
+#: src/editor.rs:1791 src/instant.rs:589
+msgid "Copying to the clipboard…"
+msgstr ""
+
+#: src/editor.rs:1801
+#, no-c-format
+msgid "Copied to the clipboard (image/png, {n} annotation)"
+msgid_plural "Copied to the clipboard (image/png, {n} annotations)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/editor.rs:1808
+msgid "Copying ended unexpectedly"
+msgstr ""
+
+#: src/geometry.rs:35
+msgid "No selection"
+msgstr ""
+
+#: src/geometry.rs:36
+#, no-c-format
+msgid "Invalid geometry: {text}"
+msgstr ""
+
+#: src/geometry.rs:40
+#, no-c-format
+msgid "Invalid size: {width}×{height} pixels"
+msgstr ""
+
+#: src/instant.rs:59
+msgid "Screen"
+msgstr ""
+
+#: src/instant.rs:60
+msgid "Area"
+msgstr ""
+
+#. TRANSLATORS: {output} ist der Name des Bildschirms (z. B. HDMI-A-1).
+#: src/instant.rs:66
+#, no-c-format
+msgid "Window “{title}” (full screen on {output})"
+msgstr ""
+
+#: src/instant.rs:75
+#, no-c-format
+msgid ""
+"Window “{title}”, framed with the mouse (labwc reports no window borders)"
+msgstr ""
+
+#: src/instant.rs:79
+msgid ""
+"Window, framed with the mouse (the active window could not be determined)"
+msgstr ""
+
+#: src/instant.rs:82
+msgid "No active window – whole screen"
+msgstr ""
+
+#: src/instant.rs:117 src/ui.rs:362
+msgid "The capture ended unexpectedly."
+msgstr ""
+
+#: src/instant.rs:245
+msgid "Screenshot Failed"
+msgstr ""
+
+#: src/instant.rs:257
+msgid "Close"
+msgstr ""
+
+#: src/instant.rs:299
+#, no-c-format
+msgid "“{path}” is not a folder – please choose another folder."
+msgstr ""
+
+#: src/instant.rs:305
+#, no-c-format
+msgid "No permission to write to “{path}” – please choose another folder."
+msgstr ""
+
+#: src/instant.rs:318
+#, no-c-format
+msgid ""
+"“{path}” is missing and cannot be created – please choose another folder."
+msgstr ""
+
+#: src/instant.rs:378
+msgid "Save Screenshot"
+msgstr ""
+
+#: src/instant.rs:405
+#, no-c-format
+msgid "{width} × {height} pixels"
+msgstr ""
+
+#: src/instant.rs:410
+msgid "unknown size"
+msgstr ""
+
+#. TRANSLATORS: Speicherdialog. Zugriffstasten von „_Name:“, „Save in _folder:“, „Copy to C_lipboard“, „_Cancel“, „_Save“ verschieden halten.
+#: src/instant.rs:423
+msgid "_Name:"
+msgstr ""
+
+#: src/instant.rs:433
+msgid "Save in _folder:"
+msgstr ""
+
+#: src/instant.rs:446
+msgid "Choose another folder…"
+msgstr ""
+
+#: src/instant.rs:468
+msgid "_Save"
+msgstr ""
+
+#: src/instant.rs:575
+msgid ""
+"Copied through GTK (wl-copy is missing): valid only while this window stays open."
+msgstr ""
+
+#: src/instant.rs:581
+msgid "Cannot copy: wl-copy is missing."
+msgstr ""
+
+#: src/instant.rs:601
+msgid "Copied to the clipboard (image/png)."
+msgstr ""
+
+#: src/instant.rs:606
+msgid "_Close"
+msgstr ""
+
+#: src/instant.rs:611
+msgid "Copying ended unexpectedly."
+msgstr ""
+
+#: src/instant.rs:635
+msgid "Choose a Folder for the Screenshot"
+msgstr ""
+
+#. TRANSLATORS: Knopf im Ordnerdialog.
+#: src/instant.rs:645
+msgid "_Select"
+msgstr ""
+
+#: src/instant.rs:674
+msgid "Only local folders are supported."
+msgstr ""
+
+#: src/main.rs:92
+#, no-c-format
+msgid "Cannot read “{path}”: {error}"
+msgstr ""
+
+#. TRANSLATORS: Datei und Grund, z. B. „“a.png”: The capture is not a PNG image“.
+#: src/main.rs:102
+#, no-c-format
+msgid "“{path}”: {error}"
+msgstr ""
+
+#. TRANSLATORS: Beschreibung einer geöffneten Datei (Speicherdialog).
+#: src/main.rs:117
+#, no-c-format
+msgid "File “{name}”"
+msgstr ""
+
+#: src/render.rs:30
+#, no-c-format
+msgid "Cannot read the picture: {error}"
+msgstr ""
+
+#: src/render.rs:35
+#, no-c-format
+msgid "Drawing failed: {error}"
+msgstr ""
+
+#: src/runner.rs:57
+#, no-c-format
+msgid "The program “{program}” is not installed"
+msgstr ""
+
+#: src/runner.rs:61
+#, no-c-format
+msgid "“{program}” could not be started: {error}"
+msgstr ""
+
+#: src/runner.rs:65
+#, no-c-format
+msgid "The output of “{program}” is too large; the program was stopped"
+msgstr ""
+
+#: src/runner.rs:69
+#, no-c-format
+msgid ""
+"The output of “{program}” could not be read ({error}); the program was stopped"
+msgstr ""
+
+#. TRANSLATORS: steht als {error} in „The output of … could not be read ({error})“.
+#: src/runner.rs:180
+msgid "the reading thread ended unexpectedly"
+msgstr ""
+
+#: src/screenshot.rs:29
+msgid "The capture is empty"
+msgstr ""
+
+#: src/screenshot.rs:30
+msgid "The capture is not a PNG image"
+msgstr ""
+
+#: src/screenshot.rs:31
+#, no-c-format
+msgid "The capture is too large ({size} MiB)"
+msgstr ""
+
+#: src/storage.rs:36
+#, no-c-format
+msgid "Cannot create the folder “{path}”: {error}"
+msgstr ""
+
+#: src/storage.rs:43
+#, no-c-format
+msgid "“{path}” is not a folder"
+msgstr ""
+
+#: src/storage.rs:47
+#, no-c-format
+msgid "No free file name in “{path}”"
+msgstr ""
+
+#: src/storage.rs:52
+#, no-c-format
+msgid "No permission to write to “{path}” – please choose another folder"
+msgstr ""
+
+#: src/storage.rs:57
+#, no-c-format
+msgid "Cannot write “{path}”: {error}"
+msgstr ""
+
+#: src/storage.rs:64
+#, no-c-format
+msgid "“{path}” already exists – please choose another name"
+msgstr ""
+
+#: src/storage.rs:69
+#, no-c-format
+msgid "Invalid file name: {reason}"
+msgstr ""
+
+#. TRANSLATORS: Gründe hinter „Invalid file name: “, klein ohne Punkt.
+#: src/storage.rs:133
+msgid "the name is empty"
+msgstr ""
+
+#: src/storage.rs:136
+msgid "“/” is not allowed in the name"
+msgstr ""
+
+#: src/storage.rs:139
+msgid "control characters are not allowed in the name"
+msgstr ""
+
+#: src/storage.rs:142
+msgid "“.” and “..” are not file names"
+msgstr ""
+
+#: src/storage.rs:150
+msgid "the name is too long (at most 255 bytes)"
+msgstr ""
+
+#. TRANSLATORS: Fenster ohne Titel und App-ID, steht in „Window “{title}” …“.
+#: src/toplevel.rs:49
+msgid "untitled"
+msgstr ""
+
+#: src/ui.rs:77
+msgid "Grab the whole _screen"
+msgstr ""
+
+#: src/ui.rs:78
+msgid ""
+"Everything that can be seen on the screen (all screens in one picture)."
+msgstr ""
+
+#: src/ui.rs:81
+msgid "_Frame a window"
+msgstr ""
+
+#: src/ui.rs:82
+msgid ""
+"Frame the window with the mouse: labwc reports no window borders, so there is no automatic window detection. A full-screen window is captured directly."
+msgstr ""
+
+#: src/ui.rs:89
+msgid "Select an _area"
+msgstr ""
+
+#: src/ui.rs:90
+msgid "Drag a rectangle while holding the mouse button. Esc cancels."
+msgstr ""
+
+#: src/ui.rs:175
+msgid "What would you like to capture?"
+msgstr ""
+
+#: src/ui.rs:182
+msgid "After the capture the editor opens for annotating, saving and copying."
+msgstr ""
+
+#: src/ui.rs:234
+#, no-c-format
+msgid ""
+"Missing programs: {programs}. Window and area need slurp, copying needs wl-copy (package wl-clipboard)."
+msgstr ""
+
+#: src/ui.rs:356
+msgid "Cancelled – nothing captured."
+msgstr ""

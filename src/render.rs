@@ -11,6 +11,7 @@ use gtk::{cairo, gdk, glib, prelude::*};
 
 use crate::{
     annotation::{Mark, Shape, arrow_head},
+    i18n::gettext_f,
     screenshot::{Png, PngError},
 };
 
@@ -26,8 +27,13 @@ pub enum RenderError {
 impl fmt::Display for RenderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Decode(error) => write!(f, "Bild kann nicht gelesen werden: {error}"),
-            Self::Cairo(error) => write!(f, "Zeichnen fehlgeschlagen: {error}"),
+            Self::Decode(error) => f.write_str(&gettext_f(
+                "Cannot read the picture: {error}",
+                &[("error", error)],
+            )),
+            Self::Cairo(error) => {
+                f.write_str(&gettext_f("Drawing failed: {error}", &[("error", error)]))
+            }
             Self::Image(error) => write!(f, "{error}"),
         }
     }
