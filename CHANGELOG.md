@@ -6,13 +6,14 @@ nach [Semantic Versioning](https://semver.org/lang/de/). Solange die Hauptversio
 
 ## [0.2.9] – 2026-10-21
 
-Ab 0.2.8 (Tag `screenshot/0.2.8`). Behebt QD-076 für Screenshot.
+Ab 0.2.8 (Tag `screenshot/0.2.8`). Behebt die fehlende Fensterdekoration
+beim erneuten Öffnen von Fenstern.
 
 ### Behoben
 - Das Auswahlfenster „Was möchten Sie aufnehmen?“ hat nach einer mit Esc
   abgebrochenen (oder fehlgeschlagenen) Aufnahme wieder seine Titelleiste.
   Bisher kam es ohne Titelleiste zurück: labwc 0.9.8 verknüpft die
-  Fensterdekoration nur beim ersten Zeigen eines Fensters (QD-076). Das
+  Fensterdekoration nur beim ersten Zeigen eines Fensters. Das
   Fenster wird jetzt nach dem Abbruch neu gebaut statt wieder gezeigt, mit
   der Meldung „Abgebrochen – keine Aufnahme.“ wie bisher.
 - Druck während einer laufenden Aufnahme holt das verborgene Auswahlfenster
@@ -48,7 +49,7 @@ Ab `main` (0.2.6). Die Fensterwahl aus 0.2.5 (Zweig `fensterwahl`) ist
 weiterhin nicht enthalten.
 
 ### Hinzugefügt
-- **Englische Oberfläche** über GNU gettext (ENTSCHEIDUNGEN Nr. 16):
+- **Englische Oberfläche** über GNU gettext:
   Texte englisch im Code, Deutsch aus `po/de.po` mit dem bisherigen Wortlaut.
   Die Sprache folgt `LANGUAGE`/`LANG`; ohne deutschen Katalog erscheint
   Englisch. Wortschatz nach GNOME 2 (gnome-screenshot, gedit 2.30).
@@ -79,7 +80,7 @@ enthalten.
 
 ### Hinzugefügt
 - Strg+Q schließt das Editorfenster wie Strg+W und das Titelleisten-X, mit
-  derselben Rückfrage bei ungespeicherten Markierungen (QREL-05, Fall P.4).
+  derselben Rückfrage bei ungespeicherten Markierungen.
   Andere offene Editorfenster bleiben offen.
 - Strg+W und Strg+Q schließen auch das Auswahlfenster „Was möchten Sie
   aufnehmen?“ (bisher nur Esc und „Abbrechen“).

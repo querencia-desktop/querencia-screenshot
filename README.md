@@ -2,8 +2,10 @@
 
 Bildschirmfotos aufnehmen, markieren und speichern für alle, die Querencia
 Desktop benutzen. Teil von
-[Querencia Desktop](https://github.com/querencia-desktop/querencia) – einer
+[Querencia Desktop](https://querencialinux.org) – einer
 klassischen Desktopumgebung im GNOME-2-Stil für Wayland (labwc, Rust, GTK 4).
+Installiert wird es zusammen mit Querencia Desktop aus der APT-Quelle;
+Anleitung auf <https://querencialinux.org>.
 
 *English summary:* A screenshot tool in the spirit of GNOME 2's
 gnome-screenshot with a small markup editor (ellipse, rectangle, arrow, pen,

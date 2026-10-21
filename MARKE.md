@@ -62,4 +62,4 @@ Anfragen zur Verwendung von Name oder Logo bitte als Issue im Repo
 [`querencia-desktop/querencia`](https://github.com/querencia-desktop/querencia)
 oder an das GitHub-Konto des Projektbesitzers `pottrauschen`.
 
-Stand: 21.10.2026 (ENTSCHEIDUNGEN Nr. 24)
+Stand: 21.10.2026
