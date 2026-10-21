@@ -1,13 +1,14 @@
 # Ausnahmen für ai-clean/clean_check.py (Screenshot 0.2.6, 20.10.2026;
 # ergänzt 0.2.7, G2-AH).
-# Bewusst KEINE Pfadeinträge: ein Pfad schaltet für ihn alle Prüfungen ab,
-# auch security. Die begründeten Ausnahmen stehen nur als Kommentar hier:
+# Pfadeinträge nur für die GitHub-Vorlagen unten (ENTSCHEIDUNGEN Nr. 17): ein
+# Pfad schaltet für ihn alle Prüfungen ab, auch security. Die übrigen
+# begründeten Ausnahmen stehen nur als Kommentar hier:
 #
 # P002 Co-Authored-By in den Commit-Texten: bleibt im Arbeitsrepo; beim
 #      Veröffentlichungsklon entfernt git filter-repo --replace-message alle
 #      Co-Authored-By-Zeilen (ENTSCHEIDUNGEN Nr. 10).
 # S004 Typografie (Anführungszeichen „“, Gedankenstrich –, Ellipse …, Pfeil →)
-#      in src/ und integration/: deutsche Oberflächentexte sind Daten; die
+#      in src/: deutsche Oberflächentexte sind Daten; die
 #      Kommentare folgen seit QS-0a durchgehend derselben Typografie
 #      (Projektstil, nicht global ersetzen).
 # S003 Backticks um Bezeichner in Kommentaren: Projektstil.
@@ -17,3 +18,11 @@
 # Doku-Standard (ENTSCHEIDUNGEN Nr. 17): CHANGELOG.md bleibt im Root
 #      (GitHub-Vorlage); CONTRIBUTING.md, SECURITY.md, MARKE.md kommen mit dem
 #      Vorlagen-Commit des Veröffentlichungsklons und bleiben dann im Root.
+# Begründete Ausnahmen für ai-clean (ENTSCHEIDUNGEN Nr. 17): GitHub erwartet diese
+# Dateien im Root bzw. unter .github/, deshalb liegen sie nicht unter docs/.
+MARKE.md
+CONTRIBUTING.md
+SECURITY.md
+CHANGELOG.md
+.github/pull_request_template.md
+.github/ISSUE_TEMPLATE/*.md

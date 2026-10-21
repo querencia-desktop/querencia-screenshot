@@ -59,8 +59,7 @@ weiterhin nicht enthalten.
 ### Geändert
 - Zugriffstasten im Englischen nach GNOME 2 (Speicherdialog Alt+N/F/L/C/S,
   Menüs File/Edit/Tools/View); im Deutschen unverändert.
-- Lizenzkopf in `LICENSE` (Copyright „Querencia Desktop contributors“,
-  ENTSCHEIDUNGEN Nr. 14 Q5).
+- Lizenzkopf (Copyright „Querencia Desktop contributors“).
 - MetaInfo: Version 0.2.7, Homepage auf das geplante Repo in der
   Organisation `querencia-desktop` statt des privaten `classic2`.
 
@@ -73,7 +72,7 @@ enthalten.
 - **Lizenz: GPL-3.0-or-later statt MIT** (`LICENSE`, `Cargo.toml`,
   SPDX-Köpfe der Quelldateien, MetaInfo `project_license`), einheitlich mit
   den übrigen Querencia-Programmen. Copyright „Querencia Desktop
-  contributors“ im README.
+  contributors“.
 - Rückfrage bei ungespeicherten Markierungen mit den Knöpfen in der
   Reihenfolge von Querencia Editor: „Ohne Speichern schließen“, „Abbrechen“,
   „Speichern …“ (Zugriffstasten unverändert Alt+O, Alt+A, Alt+S).

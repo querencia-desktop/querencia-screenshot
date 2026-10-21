@@ -121,7 +121,6 @@ src/style.css      helle, kompakte, klassische Optik
 po/                querencia-screenshot.pot, de.po, LINGUAS
 werkzeug/i18n.py   po-Pflege (pot, update, desktop, mo, pruefen)
 data/              Desktop-Vorlage (.in, englisch), erzeugte Desktop-Datei, MetaInfo
-integration/       Integration je Version (pruefen|aktivieren|zurueck), Probe
 ```
 
 Symbole: GNOME Human, wenn installiert und nur GTKs Standardthema eingestellt
