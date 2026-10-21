@@ -4,6 +4,21 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen
 nach [Semantic Versioning](https://semver.org/lang/de/). Solange die Hauptversion
 0 ist, kann sich alles ändern. Jede Zeile nennt, was Nutzer merken.
 
+## [0.2.9] – 2026-10-21
+
+Ab 0.2.8 (Tag `screenshot/0.2.8`). Behebt QD-076 für Screenshot.
+
+### Behoben
+- Das Auswahlfenster „Was möchten Sie aufnehmen?“ hat nach einer mit Esc
+  abgebrochenen (oder fehlgeschlagenen) Aufnahme wieder seine Titelleiste.
+  Bisher kam es ohne Titelleiste zurück: labwc 0.9.8 verknüpft die
+  Fensterdekoration nur beim ersten Zeigen eines Fensters (QD-076). Das
+  Fenster wird jetzt nach dem Abbruch neu gebaut statt wieder gezeigt, mit
+  der Meldung „Abgebrochen – keine Aufnahme.“ wie bisher.
+- Druck während einer laufenden Aufnahme holt das verborgene Auswahlfenster
+  nicht mehr vorzeitig zurück (es stand sonst im Bild); es kommt wie gewohnt
+  nach dem Ende der Aufnahme.
+
 ## [0.2.8] – 2026-10-20
 
 0.2.7 + Fensterwahl aus 0.2.5 (Zweig `fensterwahl`, ADR-004 „so
