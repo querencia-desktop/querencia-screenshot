@@ -80,7 +80,7 @@ jobs:
       #       --default-toolchain 1.98.1 --profile minimal -c clippy -c rustfmt
       #     echo "/home/$PRUEFER/.cargo/bin" >> "$GITHUB_PATH"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Git-Eigentümer erlauben (Container)
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
