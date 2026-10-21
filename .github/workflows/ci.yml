@@ -88,7 +88,7 @@ jobs:
       # Absolute Pfade: Die Cache-Aktion läuft als root (HOME=/github/home),
       # cargo als Prüfbenutzer mit CARGO_HOME=/home/pruefer/.cargo.
       - name: Cargo-Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             /home/pruefer/.cargo/registry/index
