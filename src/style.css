@@ -1,49 +1,58 @@
-/* Querencia Screenshot: helle, kompakte, klassische Oberfläche. */
+/* Querencia Screenshot: kompakte, klassische Oberfläche.
+   Flächen, Schrift und Ränder kommen als benannte Farben aus dem GTK-Thema
+   (@theme_bg_color, @theme_fg_color, @theme_base_color, @menu_bg_color,
+   @menu_fg_color, @borders, @insensitive_fg_color) oder sind daraus
+   gemischt (Überfahren: Knopfton um 4 % Helligkeit angehoben, hell wie
+   dunkel heller); so folgt das Programm dem Dunkelmodus ohne eigenen
+   @media-Block (QD-109). Unter Querencia-Klassisch hell liegen die Mischungen
+   nahe an den früheren festen Werten (in Klammern). Fest bleiben nur das
+   Querencia-Orange, der graue Grund hinter dem Bild und die weiße Vorschau
+   der Strichstärke. */
 
 window.qs-window {
-  background: #f5f5f5;
-  color: #303030;
+  background: @theme_bg_color; /* #f5f5f5 */
+  color: @theme_fg_color; /* #303030 */
   font-family: sans-serif;
 }
 
 window.qs-window button.qs-button {
-  background: #e8e8e8;
-  border: 1px solid #b0b0b0;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.06); /* #e8e8e8 */
+  border: 1px solid @borders; /* #b0b0b0 */
   border-radius: 2px;
   box-shadow: none;
-  color: #303030;
+  color: @theme_fg_color; /* #303030 */
   min-height: 26px;
   padding: 3px 10px;
   transition: none;
 }
 
 window.qs-window button.qs-button:hover {
-  background: #f0f0f0;
+  background: hsl(from mix(@theme_bg_color, @theme_fg_color, 0.06) h s calc(l + 4)); /* #f0f0f0 */
 }
 
 window.qs-window button.qs-button:active {
-  background: #d0d0d0;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.15); /* #d0d0d0 */
 }
 
 window.qs-window button.qs-button:disabled {
-  color: #808080;
+  color: @insensitive_fg_color; /* #808080 */
 }
 
 window.qs-window .qs-hint,
 window.qs-window .qs-status {
-  color: #505050;
+  color: mix(@theme_fg_color, @theme_bg_color, 0.1); /* #505050 */
   font-size: 0.92em;
 }
 
 window.qs-window .qs-result {
-  background: #ffffff;
-  border: 1px solid #b0b0b0;
+  background: @theme_base_color; /* #ffffff */
+  border: 1px solid @borders; /* #b0b0b0 */
   padding: 6px;
 }
 
 window.qs-window .qs-preview {
-  background: #e0e0e0;
-  border: 1px solid #c0c0c0;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.1); /* #e0e0e0 */
+  border: 1px solid @borders; /* #c0c0c0 */
 }
 
 /* ---- QS-0d: Auswahlfenster ------------------------------------------ */
@@ -57,7 +66,7 @@ window.qs-window button.qs-choice {
 }
 
 window.qs-window button.qs-choice:focus-visible {
-  outline: 1px dotted #303030;
+  outline: 1px dotted @theme_fg_color; /* #303030 */
   outline-offset: -4px;
 }
 
@@ -68,8 +77,8 @@ window.qs-window .qs-choice-title {
 /* ---- QS-0d: Editor ---------------------------------------------------- */
 
 window.qs-editor menubar.qs-menubar {
-  background: #edebe9;
-  border-bottom: 1px solid #c7c2be;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.02); /* #edebe9 */
+  border-bottom: 1px solid @borders; /* #c7c2be */
   padding: 0 2px;
 }
 
@@ -79,14 +88,14 @@ window.qs-editor menubar.qs-menubar > item {
   border: none;
   border-radius: 0;
   box-shadow: none;
-  color: #303030;
+  color: @theme_fg_color; /* #303030 */
   padding: 3px 8px;
 }
 
 window.qs-editor menubar.qs-menubar > item:hover {
-  background: #dcd8d4;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.1); /* #dcd8d4 */
   box-shadow: none;
-  color: #303030;
+  color: @theme_fg_color; /* #303030 */
 }
 
 window.qs-editor menubar.qs-menubar > item:selected {
@@ -96,17 +105,17 @@ window.qs-editor menubar.qs-menubar > item:selected {
 }
 
 window.qs-editor .qs-toolbar {
-  background: #edebe9;
-  border-bottom: 1px solid #b0b0b0;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.02); /* #edebe9 */
+  border-bottom: 1px solid @borders; /* #b0b0b0 */
   padding: 3px 4px;
 }
 
 window.qs-editor .qs-toolbar button {
-  background: #e8e8e8;
-  border: 1px solid #b0b0b0;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.06); /* #e8e8e8 */
+  border: 1px solid @borders; /* #b0b0b0 */
   border-radius: 2px;
   box-shadow: none;
-  color: #303030;
+  color: @theme_fg_color; /* #303030 */
   min-height: 26px;
   min-width: 26px;
   padding: 2px 5px;
@@ -114,7 +123,7 @@ window.qs-editor .qs-toolbar button {
 }
 
 window.qs-editor .qs-toolbar button:hover {
-  background: #f4f4f4;
+  background: hsl(from mix(@theme_bg_color, @theme_fg_color, 0.06) h s calc(l + 4)); /* #f4f4f4 */
 }
 
 window.qs-editor .qs-toolbar button:disabled {
@@ -126,14 +135,14 @@ window.qs-editor .qs-toolbar button:disabled {
    GTK 4 nennt Umschaltknöpfe im CSS „button.toggle“ (nicht „togglebutton“;
    bis 0.2.1 griff diese Regel deshalb nicht). */
 window.qs-editor .qs-toolbar button.toggle:checked {
-  background: #d6d2cd;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.15); /* #d6d2cd */
   border: 2px solid #f07746;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
   padding: 1px 4px;
 }
 
 window.qs-editor .qs-toolbar separator {
-  background: #b0b0b0;
+  background: @borders; /* #b0b0b0 */
   min-width: 1px;
 }
 
@@ -142,17 +151,17 @@ window.qs-editor .qs-canvas {
 }
 
 window.qs-editor .qs-statusbar {
-  background: #edebe9;
-  border-top: 1px solid #c7c2be;
-  color: #404040;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.02); /* #edebe9 */
+  border-top: 1px solid @borders; /* #c7c2be */
+  color: @theme_fg_color; /* #404040 */
   font-size: 0.92em;
   padding: 2px 8px;
 }
 
 /* Texteingabe über dem Bild */
 window.qs-editor .qs-textbox {
-  background: #f5f4f2;
-  border: 1px solid #888888;
+  background: @menu_bg_color; /* #f5f4f2 */
+  border: 1px solid mix(@theme_fg_color, @theme_bg_color, 0.5); /* #888888 */
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   padding: 4px;
 }
@@ -166,21 +175,21 @@ window.qs-editor .qs-toolbar menubutton.qs-palette-button > button {
 }
 
 window.qs-editor .qs-toolbar menubutton.qs-palette-button > button:checked {
-  background: #d6d2cd;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.15); /* #d6d2cd */
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 popover.qs-palette > contents {
-  background: #f5f4f2;
-  border: 1px solid #888888;
+  background: @menu_bg_color; /* #f5f4f2 */
+  border: 1px solid mix(@theme_fg_color, @theme_bg_color, 0.5); /* #888888 */
   border-radius: 2px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   padding: 5px;
 }
 
 popover.qs-palette button.qs-swatch {
-  background: #e8e8e8;
-  border: 1px solid #b0b0b0;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.06); /* #e8e8e8 */
+  border: 1px solid @borders; /* #b0b0b0 */
   border-radius: 2px;
   box-shadow: none;
   min-height: 0;
@@ -189,20 +198,20 @@ popover.qs-palette button.qs-swatch {
 }
 
 popover.qs-palette button.qs-swatch:hover {
-  background: #f4f4f4;
-  border-color: #707070;
+  background: hsl(from mix(@theme_bg_color, @theme_fg_color, 0.06) h s calc(l + 4)); /* #f4f4f4 */
+  border-color: mix(@theme_fg_color, @theme_bg_color, 0.5); /* #707070 */
 }
 
 /* Gewählte Farbe: eingedrückt, Querencia-Orange, Häkchen im Farbfeld */
 popover.qs-palette button.qs-swatch:checked {
-  background: #d6d2cd;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.15); /* #d6d2cd */
   border: 2px solid #f07746;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
   padding: 1px;
 }
 
 popover.qs-palette button:focus-visible {
-  outline: 1px dotted #303030;
+  outline: 1px dotted @menu_fg_color; /* #303030 */
   outline-offset: 1px;
 }
 
@@ -216,12 +225,12 @@ popover.qs-palette button.qs-custom {
 }
 
 popover.qs-palette button.qs-custom:hover {
-  background: #dcd8d4;
-  border-color: #b0b0b0;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.1); /* #dcd8d4 */
+  border-color: @borders; /* #b0b0b0 */
 }
 
 popover.qs-palette separator {
-  background: #c7c2be;
+  background: @borders; /* #c7c2be */
   margin: 2px 0;
   min-height: 1px;
   min-width: 0;
@@ -234,16 +243,16 @@ window.qs-editor .qs-toolbar menubutton.qs-stroke-button > button {
 }
 
 window.qs-editor .qs-toolbar menubutton.qs-stroke-button > button:checked {
-  background: #d6d2cd;
+  background: mix(@theme_bg_color, @theme_fg_color, 0.15); /* #d6d2cd */
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 popover.qs-stroke > contents {
-  background: #f5f4f2;
-  border: 1px solid #888888;
+  background: @menu_bg_color; /* #f5f4f2 */
+  border: 1px solid mix(@theme_fg_color, @theme_bg_color, 0.5); /* #888888 */
   border-radius: 2px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  color: #303030;
+  color: @menu_fg_color; /* #303030 */
   padding: 6px 8px;
 }
 
@@ -257,10 +266,10 @@ popover.qs-stroke label.qs-stroke-value {
 
 popover.qs-stroke .qs-stroke-preview {
   background: #ffffff;
-  border: 1px solid #b0b0b0;
+  border: 1px solid @borders; /* #b0b0b0 */
 }
 
 popover.qs-stroke scale:focus-visible {
-  outline: 1px dotted #303030;
+  outline: 1px dotted @menu_fg_color; /* #303030 */
   outline-offset: 1px;
 }

@@ -144,6 +144,22 @@ pub fn load_styles() {
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
     }
+    refresh_color_scheme();
+}
+
+/// GTK 4.22 lädt bei Farbschema „dunkel“ das dunkle Thema nur bei einem
+/// Wechsel im laufenden Programm; ein frisch gestartetes Programm bliebe
+/// hell (QD-081, wie Terminal 0.3.0). Eine Benachrichtigung nach dem Start
+/// lädt das Schema neu; hell bleibt hell. Die Eigenschaft gibt es erst ab
+/// GTK 4.20, daher über den Namen.
+fn refresh_color_scheme() {
+    if let Some(settings) = gtk::Settings::default()
+        && settings
+            .find_property("gtk-interface-color-scheme")
+            .is_some()
+    {
+        settings.notify("gtk-interface-color-scheme");
+    }
 }
 
 /// Zeigt das Auswahlfenster; ein schon offenes kommt nach vorn. Offene
