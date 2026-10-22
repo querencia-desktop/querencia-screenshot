@@ -4,6 +4,24 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen
 nach [Semantic Versioning](https://semver.org/lang/de/). Solange die Hauptversion
 0 ist, kann sich alles ändern. Jede Zeile nennt, was Nutzer merken.
 
+## [0.2.10] – 2026-10-22
+
+Ab 0.2.9 (Tag `screenshot/0.2.9-int`). Dunkelmodus (QD-109).
+
+### Geändert
+- Auswahlfenster und Editor folgen dem Dunkelmodus: Flächen, Schrift und
+  Ränder (Fenster, Knöpfe, Menüleiste, Werkzeugleiste, Statuszeile,
+  Texteingabe, Farb- und Strichstärken-Popover) kommen als benannte Farben
+  aus dem GTK-Thema oder sind daraus gemischt, ohne eigenen `@media`-Block.
+  Unter Querencia-Klassisch hell liegen die Töne nahe an den bisherigen
+  festen Werten (Abweichungen wenige Stufen, Belegfotos im Bericht).
+- Die mit cairo gezeichneten Werkzeugsymbole und Klapppfeile nehmen im
+  Dunkelmodus die Schriftfarbe des Themas; im hellen Thema bleiben sie
+  #303030.
+- Nach dem Start meldet das Programm das Farbschema einmal neu, damit
+  GTK 4.22 bei „dunkel“ auch ein frisch gestartetes Fenster dunkel zeigt.
+- MetaInfo: Homepage https://querencialinux.org.
+
 ## [0.2.9] – 2026-10-21
 
 Ab 0.2.8 (Tag `screenshot/0.2.8`). Behebt QD-076 für Screenshot.

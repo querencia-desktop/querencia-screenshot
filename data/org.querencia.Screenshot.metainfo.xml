@@ -21,7 +21,7 @@
     <p>The Print key of the Querencia session starts the program through the session's launcher.</p>
     <p xml:lang="de">Die Druck-Taste der Querencia-Sitzung startet das Programm über den Starter der Sitzung.</p>
   </description>
-  <url type="homepage">https://github.com/querencia-desktop/querencia-screenshot</url>
+  <url type="homepage">https://querencialinux.org</url>
   <launchable type="desktop-id">org.querencia.Screenshot.desktop</launchable>
   <provides>
     <binary>querencia-screenshot</binary>
@@ -45,6 +45,12 @@
     <color type="primary" scheme_preference="dark">#B8532B</color>
   </branding>
   <releases>
+    <release version="0.2.10" date="2026-10-22">
+      <description>
+        <p>The capture window and the editor follow the dark style of the desktop.</p>
+        <p xml:lang="de">Auswahlfenster und Editor folgen der dunklen Darstellung des Desktops.</p>
+      </description>
+    </release>
     <release version="0.2.9" date="2026-10-21">
       <description>
         <p>The capture window keeps its title bar when it comes back after a cancelled capture.</p>
