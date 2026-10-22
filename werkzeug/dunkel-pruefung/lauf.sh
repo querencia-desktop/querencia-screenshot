@@ -16,19 +16,19 @@ RES=${5:-1600x1000}; T=${6:-300}
 case $SCHEMA in hell | dunkel) ;; *) echo "Schema hell|dunkel" >&2; exit 2 ;; esac
 case $SPRACHE in de | en) ;; *) echo "Sprache de|en" >&2; exit 2 ;; esac
 case $NAME in '' | .* | */* | *[!A-Za-z0-9._-]*) echo "unzulässiger Name: $NAME" >&2; exit 2 ;; esac
-G=~/projects/querencia-screenshot-0210-pruefung/gui-test
+G=$HOME/projects/querencia-screenshot-0210-pruefung/gui-test
 P=$G/$NAME
 [ ! -e "$P" ] || { echo "Profil $P gibt es schon (die Prüfung löscht nichts)" >&2; exit 2; }
 mkdir -p "$G"
-QB=~/projects/querencia-terminal-gui-test/bin
+QB=$HOME/projects/querencia-terminal-gui-test/bin
 [ -x "$QB/qeingabe" ] && [ -x "$QB/qausgabe" ] || { echo "qeingabe/qausgabe fehlen in $QB" >&2; exit 2; }
 S=$G/schnappschuss-symbole
 if [ ! -f "$S/zeitpunkt.txt" ]; then
     mkdir -p "$S"
-    cp -a ~/.local/share/icons/Querencia ~/.local/share/icons/hicolor "$S/"
+    cp -a $HOME/.local/share/icons/Querencia $HOME/.local/share/icons/hicolor "$S/"
     date '+%F %T' >"$S/zeitpunkt.txt"
 fi
-THEMA=$(readlink -f ~/.local/share/themes/Querencia-Klassisch)
+THEMA=$(readlink -f $HOME/.local/share/themes/Querencia-Klassisch)
 [ -f "$THEMA/gtk-4.0/gtk-dark.css" ] || { echo "Thema ohne Dunkelfassung: $THEMA" >&2; exit 2; }
 mkdir -p "$P"/{config/labwc,config/gtk-4.0,data/themes,data/icons,state,logs,out,home/Bilder}
 cat >"$P/config/labwc/rc.xml" <<X

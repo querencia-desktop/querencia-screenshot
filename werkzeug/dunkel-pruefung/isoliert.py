@@ -25,7 +25,7 @@ import sys
 import tempfile
 import time
 
-LABWC = "~/opt/labwc-0.9.8/bin/labwc"
+LABWC = os.path.expanduser("~/opt/labwc-0.9.8/bin/labwc")
 def _session_labwc(pid: str) -> bool:
     """labwc der echten Sitzung (XDG_RUNTIME_DIR unter /run/user), nicht die
     isolierten Testsitzungen anderer Worker, die jederzeit enden dürfen."""
@@ -124,7 +124,7 @@ def main() -> int:
             env.pop(k)
     # User directories as on the VM (the profile has no user-dirs.dirs of
     # its own unless the caller made one).
-    real_dirs = "~/.config/user-dirs.dirs"
+    real_dirs = os.path.expanduser("~/.config/user-dirs.dirs")
     own_dirs = os.path.join(profile, "config/user-dirs.dirs")
     if os.path.exists(real_dirs) and not os.path.exists(own_dirs):
         shutil.copy2(real_dirs, own_dirs)

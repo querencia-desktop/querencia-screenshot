@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Querencia Screenshot 0.2.9 (Fensterwahl; deutsch/englisch über gettext; MetaInfo zweisprachig von Hand). Lizenz GPL-3.0-or-later nach LICENSE (bis 0.2.4 MIT). Menüname „Bildschirmfoto aufnehmen“, der Komponentenname ist der Programmname.
-     Abgeleitet von der Fassung aus querencia-software-paket/werkzeug/metainfo-erzeugen.py (SW-5, Querencia Software, 2026-10-18);
+     Abgeleitet von der Fassung aus querencia-software-paket/werkzeug/metainfo-erzeugen.py (Querencia Software, 2026-10-18);
      Metadaten unter FSFAP, damit Kataloge sie frei übernehmen dürfen. -->
 <component type="desktop-application">
   <id>org.querencia.Screenshot</id>

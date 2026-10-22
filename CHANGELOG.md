@@ -6,7 +6,7 @@ nach [Semantic Versioning](https://semver.org/lang/de/). Solange die Hauptversio
 
 ## [0.2.10] – 2026-10-22
 
-Ab 0.2.9 (Tag `screenshot/0.2.9-int`). Dunkelmodus (QD-109).
+Ab 0.2.9 (Tag `screenshot/0.2.9-int`). Dunkelmodus.
 
 ### Geändert
 - Auswahlfenster und Editor folgen dem Dunkelmodus: Flächen, Schrift und
@@ -24,13 +24,14 @@ Ab 0.2.9 (Tag `screenshot/0.2.9-int`). Dunkelmodus (QD-109).
 
 ## [0.2.9] – 2026-10-21
 
-Ab 0.2.8 (Tag `screenshot/0.2.8`). Behebt QD-076 für Screenshot.
+Ab 0.2.8 (Tag `screenshot/0.2.8`). Behebt die fehlende Fensterdekoration
+beim erneuten Öffnen von Fenstern.
 
 ### Behoben
 - Das Auswahlfenster „Was möchten Sie aufnehmen?“ hat nach einer mit Esc
   abgebrochenen (oder fehlgeschlagenen) Aufnahme wieder seine Titelleiste.
   Bisher kam es ohne Titelleiste zurück: labwc 0.9.8 verknüpft die
-  Fensterdekoration nur beim ersten Zeigen eines Fensters (QD-076). Das
+  Fensterdekoration nur beim ersten Zeigen eines Fensters. Das
   Fenster wird jetzt nach dem Abbruch neu gebaut statt wieder gezeigt, mit
   der Meldung „Abgebrochen – keine Aufnahme.“ wie bisher.
 - Druck während einer laufenden Aufnahme holt das verborgene Auswahlfenster
@@ -66,7 +67,7 @@ Ab `main` (0.2.6). Die Fensterwahl aus 0.2.5 (Zweig `fensterwahl`) ist
 weiterhin nicht enthalten.
 
 ### Hinzugefügt
-- **Englische Oberfläche** über GNU gettext (ENTSCHEIDUNGEN Nr. 16):
+- **Englische Oberfläche** über GNU gettext:
   Texte englisch im Code, Deutsch aus `po/de.po` mit dem bisherigen Wortlaut.
   Die Sprache folgt `LANGUAGE`/`LANG`; ohne deutschen Katalog erscheint
   Englisch. Wortschatz nach GNOME 2 (gnome-screenshot, gedit 2.30).
@@ -77,10 +78,9 @@ weiterhin nicht enthalten.
 ### Geändert
 - Zugriffstasten im Englischen nach GNOME 2 (Speicherdialog Alt+N/F/L/C/S,
   Menüs File/Edit/Tools/View); im Deutschen unverändert.
-- Lizenzkopf in `LICENSE` (Copyright „Querencia Desktop contributors“,
-  ENTSCHEIDUNGEN Nr. 14 Q5).
+- Lizenzkopf (Copyright „Querencia Desktop contributors“).
 - MetaInfo: Version 0.2.7, Homepage auf das geplante Repo in der
-  Organisation `querencia-desktop` statt des privaten `classic2`.
+  Organisation `querencia-desktop` statt des alten privaten Repos.
 
 ## [0.2.6] – 2026-10-19
 
@@ -91,14 +91,14 @@ enthalten.
 - **Lizenz: GPL-3.0-or-later statt MIT** (`LICENSE`, `Cargo.toml`,
   SPDX-Köpfe der Quelldateien, MetaInfo `project_license`), einheitlich mit
   den übrigen Querencia-Programmen. Copyright „Querencia Desktop
-  contributors“ im README.
+  contributors“.
 - Rückfrage bei ungespeicherten Markierungen mit den Knöpfen in der
   Reihenfolge von Querencia Editor: „Ohne Speichern schließen“, „Abbrechen“,
   „Speichern …“ (Zugriffstasten unverändert Alt+O, Alt+A, Alt+S).
 
 ### Hinzugefügt
 - Strg+Q schließt das Editorfenster wie Strg+W und das Titelleisten-X, mit
-  derselben Rückfrage bei ungespeicherten Markierungen (QREL-05, Fall P.4).
+  derselben Rückfrage bei ungespeicherten Markierungen.
   Andere offene Editorfenster bleiben offen.
 - Strg+W und Strg+Q schließen auch das Auswahlfenster „Was möchten Sie
   aufnehmen?“ (bisher nur Esc und „Abbrechen“).
@@ -130,4 +130,4 @@ eine Produktentscheidung.
 ## [0.2.0] – 2026-10-17
 
 - Auswahlfenster, Editor mit Markierungswerkzeugen, Speichern,
-  Zwischenablage (QS-0d).
+  Zwischenablage.

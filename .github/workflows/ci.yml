@@ -1,0 +1,123 @@
+# Einfache CI für Querencia-Rust-Repos: Format, Lints, Tests – ohne Bildschirm.
+# Die isolierte GUI-Prüfung (labwc, Bildschirmfotos) läuft NICHT hier, sondern
+# bei der Entwicklung (siehe CONTRIBUTING.md).
+#
+# Anpassen je Repo: ENTWICKLUNGSPAKETE (Zeile unten), bei Workspaces ggf.
+# `--workspace`. Erster Lauf auf GitHub beim privaten Push am 21.10.2026; die
+# Fehler daraus behebt GH-7 (Prüfbenutzer, LANG, fehlende Werkzeuge).
+#
+# Annahmen:
+#  - Die Programme brauchen GTK 4.22 und gtk4-layer-shell/VTE (Ubuntu 26.04).
+#    GitHubs `ubuntu-latest` ist älter, deshalb läuft der Job im Container
+#    `ubuntu:26.04` (Image muss auf Docker Hub verfügbar sein).
+#  - Rust aus dem Ubuntu-Archiv (rustc/cargo 1.93). Braucht ein Repo eine neuere
+#    Toolchain (Querencia Files: 1.98.1), den Block „Rust über rustup“ nutzen.
+#  - Der Container-Job läuft als root. root umgeht Datei- und Ordnerrechte, Tests
+#    für „kein Leserecht“/„schreibgeschützt“ schlügen dann fehl. Deshalb laufen
+#    fmt, clippy, test und cargo metadata als Prüfbenutzer `pruefer` (`runuser`),
+#    mit eigenem HOME und XDG-Ordnern; installiert wird weiter als root.
+#  - Das Container-Image setzt kein LANG. Ohne UTF-8-Locale liefert libarchive
+#    für Namen mit Umlauten NULL (Querencia Archiv stürzte so ab), deshalb
+#    LANG=C.UTF-8 (in glibc eingebaut, kein locales-Paket nötig).
+#  - Das Image ist minimal (kein ps, kein update-desktop-database): Werkzeuge,
+#    die Tests aufrufen, gehören in ENTWICKLUNGSPAKETE.
+name: CI
+
+on:
+  push:
+    branches: [main, querencia]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  LANG: C.UTF-8
+  # Prüfbenutzer (nicht root); HOME setzt `runuser`, die XDG-Ordner stehen hier.
+  PRUEFER: pruefer
+  XDG_CONFIG_HOME: /home/pruefer/.config
+  XDG_DATA_HOME: /home/pruefer/.local/share
+  XDG_CACHE_HOME: /home/pruefer/.cache
+  XDG_STATE_HOME: /home/pruefer/.local/state
+  XDG_RUNTIME_DIR: /tmp/xdg-run-pruefer
+  # Pro Repo anpassen. Namen für Ubuntu 26.04; auf der Entwicklungs-VM sind gtk4 4.22.4,
+  # gtk4-layer-shell-0 1.3.0, vte-2.91-gtk4 0.84.0 als pkg-config-Module vorhanden,
+  # die -dev-Paketnamen hier sind auf der VM (Ubuntu 26.04) installiert und damit gültig
+  # (GH-2, 19.10.2026); im Container ubuntu:26.04 nicht getestet. python3 braucht der
+  # Schritt „Lizenzen der Abhängigkeiten“ (fehlt im Container sonst):
+  ENTWICKLUNGSPAKETE: >-
+    libgtk-4-dev libwayland-dev
+
+jobs:
+  pruefen:
+    name: fmt, clippy, test
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    timeout-minutes: 45
+    steps:
+      - name: Werkzeuge installieren
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git build-essential pkg-config rustc cargo rust-clippy rustfmt python3 \
+            ${ENTWICKLUNGSPAKETE}
+          useradd --create-home --shell /bin/bash "$PRUEFER"
+
+      # Block „Rust über rustup“ (nur wenn nötig; dann rust-clippy/rustfmt/rustc/cargo
+      # oben aus der apt-Zeile streichen):
+      # - name: Rust über rustup
+      #   run: |
+      #     apt-get install -y --no-install-recommends curl
+      #     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup-init.sh
+      #     runuser -u "$PRUEFER" -- sh /tmp/rustup-init.sh -y \
+      #       --default-toolchain 1.98.1 --profile minimal -c clippy -c rustfmt
+      #     echo "/home/$PRUEFER/.cargo/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/checkout@v4
+
+      - name: Git-Eigentümer erlauben (Container)
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Absolute Pfade: Die Cache-Aktion läuft als root (HOME=/github/home),
+      # cargo als Prüfbenutzer mit CARGO_HOME=/home/pruefer/.cargo.
+      - name: Cargo-Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/pruefer/.cargo/registry/index
+            /home/pruefer/.cargo/registry/cache
+            /home/pruefer/.cargo/git/db
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      # Nach Checkout und Cache: alles, was cargo schreibt, gehört dem Prüfbenutzer.
+      - name: Arbeitsbereich dem Prüfbenutzer übereignen
+        run: |
+          install -d -m 700 -o "$PRUEFER" -g "$PRUEFER" "$XDG_RUNTIME_DIR"
+          chown -R "$PRUEFER:$PRUEFER" "$GITHUB_WORKSPACE" "/home/$PRUEFER"
+          runuser -u "$PRUEFER" -- sh -c 'id; echo "HOME=$HOME USER=$USER LANG=$LANG"; cargo --version'
+
+      - name: Format
+        run: runuser -u "$PRUEFER" -- cargo fmt --all --check
+
+      - name: Clippy
+        run: runuser -u "$PRUEFER" -- cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Tests (ohne Bildschirm)
+        # GUI-Tests, die einen Anzeigeserver brauchen, sind im Repo mit
+        # #[ignore] markiert; die laufen in der isolierten Prüfung.
+        run: runuser -u "$PRUEFER" -- cargo test --locked
+
+      - name: Lizenzen der Abhängigkeiten (Information)
+        if: always()
+        run: |
+          runuser -u "$PRUEFER" -- cargo metadata --locked --format-version 1 \
+            | python3 -c "import json,sys,collections; m=json.load(sys.stdin); c=collections.Counter(p.get('license') or 'KEINE ANGABE' for p in m['packages'] if p['source']); [print(n,l) for l,n in c.most_common()]"
