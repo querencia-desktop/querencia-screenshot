@@ -1,11 +1,11 @@
 # QS-0a – Manuelle GUI-Abnahme: Anleitung
 
 Prüfobjekt: Querencia Screenshot, Entwicklungsbuild `target/debug/querencia-screenshot`
-aus `~/projects/querencia-screenshot-dev` (Rust 1.98.1).
+aus diesem Repo (Rust 1.98.1).
 
 ## Regeln
 
-- Nur der Besitzer in der laufenden Querencia-Sitzung (labwc, Wayland); kein `sudo`,
+- Nur von Hand in der laufenden Querencia-Sitzung (labwc, Wayland); kein `sudo`,
   keine Installation durch das Werkzeug, keine Änderung globaler Einstellungen.
 - Das Startskript legt `~/qs-0a-gui-test/` an (Marker `.qs-0a-gui-test`) und leitet
   `XDG_*` dorthin um: Screenshots landen unter `~/qs-0a-gui-test/Bilder/Screenshots/`,
@@ -16,7 +16,7 @@ aus `~/projects/querencia-screenshot-dev` (Rust 1.98.1).
 
 ## Voraussetzungen
 
-| Programm | Zweck | Stand auf der VM (2026-10-15) |
+| Programm | Zweck | Stand in der Entwicklungsumgebung (2026-10-15) |
 |---|---|---|
 | `grim` | Aufnahme | vorhanden (1.4.0) |
 | `slurp` | Rechteckauswahl (Modi „Rechteck“, „Fenster (per Rechteck)“) | **fehlt** – Paket `slurp` |
@@ -29,7 +29,7 @@ Fehlende Programme meldet das Werkzeug beim Start in der Statuszeile; der Modus
 ## Start
 
 ```bash
-~/projects/querencia-screenshot-dev/scripts/qs-0a-gui-start.sh
+scripts/qs-0a-gui-start.sh
 ```
 Log: `~/qs-0a-gui-test/logs/querencia-screenshot-<Zeitstempel>.log` (enthält keine Bilddaten).
 

@@ -670,18 +670,47 @@ fn key_name(english: &str) -> Option<String> {
 
 // ---------------------------------------------------------- Werkzeugleiste
 
-/// Kleines Symbol, mit cairo gezeichnet (unabhängig vom Symbolthema).
-fn drawn_icon(size: i32, paint: impl Fn(&cairo::Context, f64) + 'static) -> gtk::DrawingArea {
+/// Zeichenfarbe der mit cairo gezeichneten Symbole im hellen Thema (#303030).
+const INK: (f64, f64, f64) = (0.19, 0.19, 0.19);
+
+/// Zeichenfarbe für `widget`: mit dunkler Schrift des Fensters (helles
+/// Thema) wie bisher [`INK`], mit heller Schrift (Dunkelmodus) die
+/// Schriftfarbe des Fensters aus dem Thema (QD-109). Das Fenster und nicht
+/// das Widget entscheidet, damit gesperrte Knöpfe (graue Schrift) im hellen
+/// Thema dunkel gezeichnet bleiben; sie blendet das CSS über `opacity` ab.
+fn ink(widget: &impl IsA<gtk::Widget>) -> (f64, f64, f64) {
+    let color = widget
+        .as_ref()
+        .root()
+        .map_or_else(|| widget.as_ref().color(), |root| root.color());
+    ink_for(color.red(), color.green(), color.blue())
+}
+
+fn ink_for(r: f32, g: f32, b: f32) -> (f64, f64, f64) {
+    let (r, g, b) = (f64::from(r), f64::from(g), f64::from(b));
+    if 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.5 {
+        INK
+    } else {
+        (r, g, b)
+    }
+}
+
+/// Kleines Symbol, mit cairo gezeichnet (unabhängig vom Symbolthema), in
+/// der Zeichenfarbe [`ink`].
+fn drawn_icon(
+    size: i32,
+    paint: impl Fn(&cairo::Context, f64, (f64, f64, f64)) + 'static,
+) -> gtk::DrawingArea {
     let icon = gtk::DrawingArea::new();
     icon.set_content_width(size);
     icon.set_content_height(size);
-    icon.set_draw_func(move |_, cr, w, h| paint(cr, f64::from(w.min(h))));
+    icon.set_draw_func(move |area, cr, w, h| paint(cr, f64::from(w.min(h)), ink(area)));
     icon
 }
 
 fn tool_icon(tool: Tool) -> gtk::DrawingArea {
-    drawn_icon(20, move |cr, s| {
-        cr.set_source_rgb(0.19, 0.19, 0.19);
+    drawn_icon(20, move |cr, s, (r, g, b)| {
+        cr.set_source_rgb(r, g, b);
         cr.set_line_width(2.0);
         cr.set_line_cap(cairo::LineCap::Round);
         cr.set_line_join(cairo::LineJoin::Round);
@@ -792,11 +821,12 @@ fn palette_button(editor: &Rc<Editor>) -> gtk::MenuButton {
     let current = gtk::DrawingArea::new();
     current.set_content_width(32);
     current.set_content_height(18);
-    current.set_draw_func(move |_, cr, w, h| {
+    current.set_draw_func(move |area, cr, w, h| {
         let (w, h) = (f64::from(w), f64::from(h));
         paint_swatch(cr, 0.0, 0.0, w - 10.0, h, current_color(&weak));
         // Klapppfeil wie bei klassischen Auswahlknöpfen
-        cr.set_source_rgb(0.19, 0.19, 0.19);
+        let (r, g, b) = ink(area);
+        cr.set_source_rgb(r, g, b);
         cr.move_to(w - 7.0, h / 2.0 - 2.0);
         cr.line_to(w - 1.0, h / 2.0 - 2.0);
         cr.line_to(w - 4.0, h / 2.0 + 2.0);
@@ -1070,12 +1100,13 @@ fn stroke_button(editor: &Rc<Editor>) -> gtk::MenuButton {
     let current = gtk::DrawingArea::new();
     current.set_content_width(32);
     current.set_content_height(18);
-    current.set_draw_func(move |_, cr, w, h| {
+    current.set_draw_func(move |area, cr, w, h| {
         let (w, h) = (f64::from(w), f64::from(h));
         // 1 … 20 px auf 1 … 10 Bildschirmpixel abgebildet
         let px = f64::from(current_width(&weak).px());
         let line = 1.0 + (px - 1.0) * 9.0 / 19.0;
-        cr.set_source_rgb(0.19, 0.19, 0.19);
+        let (r, g, b) = ink(area);
+        cr.set_source_rgb(r, g, b);
         cr.rectangle(1.0, (h - line) / 2.0, w - 13.0, line);
         cr.fill().ok();
         // Klapppfeil wie bei der Farbschaltfläche
@@ -1197,8 +1228,8 @@ enum Fallback {
 }
 
 fn fallback_icon(kind: Fallback) -> gtk::DrawingArea {
-    drawn_icon(20, move |cr, s| {
-        cr.set_source_rgb(0.19, 0.19, 0.19);
+    drawn_icon(20, move |cr, s, (r, g, b)| {
+        cr.set_source_rgb(r, g, b);
         cr.set_line_width(2.0);
         cr.set_line_cap(cairo::LineCap::Round);
         match kind {
@@ -1927,6 +1958,17 @@ pub fn marked_name(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ink_follows_light_text_only() {
+        // Querencia-Klassisch hell: Schrift #3c3c3c → bisheriges #303030
+        let c = |v: u8| f32::from(v) / 255.0;
+        assert_eq!(ink_for(c(0x3c), c(0x3c), c(0x3c)), INK);
+        // dunkel: Schrift #dfdbd2 → diese Farbe
+        let (r, g, b) = ink_for(c(0xdf), c(0xdb), c(0xd2));
+        assert!((r - 223.0 / 255.0).abs() < 1e-6 && (g - 219.0 / 255.0).abs() < 1e-6);
+        assert!((b - 210.0 / 255.0).abs() < 1e-6);
+    }
 
     #[test]
     fn fit_view_scales_down_centres_and_maps_back_exactly() {

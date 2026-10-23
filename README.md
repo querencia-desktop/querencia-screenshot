@@ -41,8 +41,8 @@ Ausführlich (Tasten, Aufnahmewege, Speichern, Sprachen, Aufbau):
 
 | | |
 |---|---|
-| Version | 0.2.9 (Tag `screenshot/0.2.9`); seit 0.2.8 Fensterwahl per Klick, Menükürzel in der Sprache der Oberfläche, Rückfrage bei angefangenem Text |
-| Letzte Prüfung | 21.10.2026: Unit-Tests; isolierte GUI-Prüfung (Stand 0.2.8: 66 Fälle, 691 Prüfpunkte, 0 Fehler) |
+| Version | 0.2.10 (Tag `screenshot/0.2.10`; Auswahlfenster und Editor folgen dem Dunkelmodus); seit 0.2.9 behält das Auswahlfenster nach einem Abbruch seine Titelleiste; seit 0.2.8 Fensterwahl per Klick, Menükürzel in der Sprache der Oberfläche, Rückfrage bei angefangenem Text |
+| Letzte Prüfung | 22.10.2026 (0.2.10): isolierte Prüfung hell/dunkel (`werkzeug/dunkel-pruefung/`); 21.10.2026: Unit-Tests; isolierte GUI-Prüfung (Stand 0.2.8: 66 Fälle, 691 Prüfpunkte, 0 Fehler) |
 | Bekannte Lücken | Fensterwahl erkennt nur Fenster mit labwc-Rahmen; Kommandozeilenhilfe und Protokollzeilen nicht übersetzt; die isolierte GUI-Prüfung liegt noch nicht in diesem Repo |
 | Getestet auf | Ubuntu 26.04, labwc 0.9.8, GTK 4.22, Rust 1.93 |
 | Nicht getestet | andere Compositoren, HiDPI, Mehrmonitor |

@@ -1,9 +1,9 @@
 # Querencia Screenshot – Bedienung, Aufnahme, Sprachen, Aufbau
 
-Ausführliche Angaben, aus dem README ausgelagert (DOKU-1, 20.10.2026).
+Ausführliche Angaben, aus dem README ausgelagert (20.10.2026).
 Einstieg und Stand: [README](../README.md).
 
-## Bedienung (QS-0d)
+## Bedienung
 
 | Aufruf | Verhalten |
 |---|---|

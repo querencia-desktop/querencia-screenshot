@@ -4,6 +4,24 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen
 nach [Semantic Versioning](https://semver.org/lang/de/). Solange die Hauptversion
 0 ist, kann sich alles ändern. Jede Zeile nennt, was Nutzer merken.
 
+## [0.2.10] – 2026-10-22
+
+Ab 0.2.9 (Tag `screenshot/0.2.9-int`). Dunkelmodus.
+
+### Geändert
+- Auswahlfenster und Editor folgen dem Dunkelmodus: Flächen, Schrift und
+  Ränder (Fenster, Knöpfe, Menüleiste, Werkzeugleiste, Statuszeile,
+  Texteingabe, Farb- und Strichstärken-Popover) kommen als benannte Farben
+  aus dem GTK-Thema oder sind daraus gemischt, ohne eigenen `@media`-Block.
+  Unter Querencia-Klassisch hell liegen die Töne nahe an den bisherigen
+  festen Werten (Abweichungen wenige Stufen, Belegfotos im Bericht).
+- Die mit cairo gezeichneten Werkzeugsymbole und Klapppfeile nehmen im
+  Dunkelmodus die Schriftfarbe des Themas; im hellen Thema bleiben sie
+  #303030.
+- Nach dem Start meldet das Programm das Farbschema einmal neu, damit
+  GTK 4.22 bei „dunkel“ auch ein frisch gestartetes Fenster dunkel zeigt.
+- MetaInfo: Homepage https://querencialinux.org.
+
 ## [0.2.9] – 2026-10-21
 
 Ab 0.2.8 (Tag `screenshot/0.2.8`). Behebt die fehlende Fensterdekoration
@@ -62,7 +80,7 @@ weiterhin nicht enthalten.
   Menüs File/Edit/Tools/View); im Deutschen unverändert.
 - Lizenzkopf (Copyright „Querencia Desktop contributors“).
 - MetaInfo: Version 0.2.7, Homepage auf das geplante Repo in der
-  Organisation `querencia-desktop` statt des privaten `classic2`.
+  Organisation `querencia-desktop` statt des alten privaten Repos.
 
 ## [0.2.6] – 2026-10-19
 
@@ -112,4 +130,4 @@ eine Produktentscheidung.
 ## [0.2.0] – 2026-10-17
 
 - Auswahlfenster, Editor mit Markierungswerkzeugen, Speichern,
-  Zwischenablage (QS-0d).
+  Zwischenablage.
