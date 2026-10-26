@@ -1,11 +1,19 @@
-# Nur die GitHub-Aktionen der CI (actions/checkout, actions/cache), monatlich.
+# Nur die GitHub-Aktionen der CI (actions/checkout, actions/cache), monatlich und
+# als EIN gemeinsamer Pull-Request je Repo (Gruppe aktionen).
 # Keine cargo-Einträge (GH-7, 21.10.2026): Abhängigkeiten werden bewusst über
 # Cargo.lock und die Programmversionen gehoben, nicht über wöchentliche PRs.
 # Eine neue Hauptversion einer Aktion erst in vorlagen/.github/workflows/ci.yml
 # prüfen (Container-Job ubuntu:26.04), dann in die Klone übernehmen.
+# Nur in Repos mit .github/workflows/ (ohne Workflow scheitert Dependabot).
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      aktionen:
+        patterns:
+          - "*"

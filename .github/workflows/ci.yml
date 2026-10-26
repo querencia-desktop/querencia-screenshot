@@ -20,7 +20,19 @@
 #    für Namen mit Umlauten NULL (Querencia Archiv stürzte so ab), deshalb
 #    LANG=C.UTF-8 (in glibc eingebaut, kein locales-Paket nötig).
 #  - Das Image ist minimal (kein ps, kein update-desktop-database): Werkzeuge,
-#    die Tests aufrufen, gehören in ENTWICKLUNGSPAKETE.
+#    die Tests aufrufen, gehören in ENTWICKLUNGSPAKETE, ebenso Bibliotheken, die
+#    ein Programm erst zur Laufzeit per dlopen lädt (Querencia Sitzung:
+#    libpolkit-agent-1-0).
+#  - Das Image hat nur C.UTF-8; Tests, die unter `en_US.UTF-8` sortieren oder
+#    übersetzen (Querencia Shell: Anwendungskatalog des Panels), brauchen
+#    `locales-all` in ENTWICKLUNGSPAKETE.
+#  - Der Container darf keine Benutzer-Namensräume anlegen (`unshare -U`:
+#    „Operation not permitted“). Tests, die welche brauchen, schaltet das Repo
+#    über eine eigene Variable im Block `env` ab (Querencia Shell:
+#    QUERENCIA_DATEIARBEIT_OHNE_NAMENSRAUM=1).
+#  - actions/checkout@v7 und actions/cache@v6 laufen mit Node 24 (Runner ab
+#    2.327.1, bei GitHub gegeben) und sind im Container-Job geprüft. checkout
+#    legt keine Zugangsdaten ab (`persist-credentials: false`): Die CI liest nur.
 name: CI
 
 on:
@@ -80,7 +92,9 @@ jobs:
       #       --default-toolchain 1.98.1 --profile minimal -c clippy -c rustfmt
       #     echo "/home/$PRUEFER/.cargo/bin" >> "$GITHUB_PATH"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Git-Eigentümer erlauben (Container)
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -88,7 +102,7 @@ jobs:
       # Absolute Pfade: Die Cache-Aktion läuft als root (HOME=/github/home),
       # cargo als Prüfbenutzer mit CARGO_HOME=/home/pruefer/.cargo.
       - name: Cargo-Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             /home/pruefer/.cargo/registry/index
