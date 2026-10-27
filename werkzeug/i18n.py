@@ -43,7 +43,9 @@ KEYWORDS = {  # Name -> (Zahl der Text-Argumente, Kontext zuerst?)
 HEADER_PLURALS = {
     "de": "nplurals=2; plural=(n != 1);",
     "en": "nplurals=2; plural=(n != 1);",
+    "es": "nplurals=2; plural=(n != 1);",
     "fr": "nplurals=2; plural=(n > 1);",
+    "it": "nplurals=2; plural=(n != 1);",
 }
 
 

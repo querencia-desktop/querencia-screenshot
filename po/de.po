@@ -222,7 +222,7 @@ msgstr "Wiederholt"
 msgid "_New Screenshot"
 msgstr "_Neue Aufnahme"
 
-#: src/editor.rs:555 src/editor.rs:1693
+#: src/editor.rs:555 src/editor.rs:1732
 msgid "_Save…"
 msgstr "_Speichern …"
 
@@ -256,12 +256,12 @@ msgstr "_Alle Markierungen entfernen …"
 msgid "_Edit"
 msgstr "_Bearbeiten"
 
-#: src/editor.rs:591 src/editor.rs:840
+#: src/editor.rs:591 src/editor.rs:870
 msgid "_Custom Color…"
 msgstr "_Benutzerdefinierte Farbe …"
 
 #. TRANSLATORS: Abschnittstitel im Menü Werkzeuge.
-#: src/editor.rs:593 src/editor.rs:881
+#: src/editor.rs:593 src/editor.rs:911
 msgid "Color"
 msgstr "Farbe"
 
@@ -270,7 +270,7 @@ msgid "Set _Line Width…"
 msgstr "_Strichstärke einstellen …"
 
 #. TRANSLATORS: Abschnittstitel im Menü Werkzeuge.
-#: src/editor.rs:604 src/editor.rs:1089 src/editor.rs:1180
+#: src/editor.rs:604 src/editor.rs:1120 src/editor.rs:1211
 msgid "Line Width"
 msgstr "Strichstärke"
 
@@ -298,176 +298,176 @@ msgctxt "keyboard label"
 msgid "Shift"
 msgstr "Umschalt"
 
-#: src/editor.rs:843
+#: src/editor.rs:873
 msgid "Choose any color in the color dialog"
 msgstr "Eine beliebige Farbe im Farbdialog wählen"
 
-#: src/editor.rs:904
+#: src/editor.rs:934
 msgid "Custom Color"
 msgstr "Benutzerdefinierte Farbe"
 
-#: src/editor.rs:925
+#: src/editor.rs:955
 msgid "Choose a hue and a shade or type “#RRGGBB”."
 msgstr "Farbton und Farbfeld wählen oder „#RRGGBB“ eingeben."
 
-#: src/editor.rs:930 src/ui.rs:194
+#: src/editor.rs:960 src/ui.rs:227
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: src/editor.rs:932
+#: src/editor.rs:962
 msgid "Apply"
 msgstr "Übernehmen"
 
-#: src/editor.rs:967
+#: src/editor.rs:997
 #, no-c-format
 msgid "Color chosen: {color}"
 msgstr "Farbe gewählt: {color}"
 
-#: src/editor.rs:1105
+#: src/editor.rs:1136
 msgid "Line width in pixels"
 msgstr "Strichstärke in Pixeln"
 
-#: src/editor.rs:1281
+#: src/editor.rs:1312
 msgid "New"
 msgstr "Neu"
 
-#: src/editor.rs:1284
+#: src/editor.rs:1315
 msgid "New screenshot (Ctrl+N)"
 msgstr "Neue Aufnahme (Strg+N)"
 
-#: src/editor.rs:1288
+#: src/editor.rs:1319
 msgid "Save"
 msgstr "Speichern"
 
-#: src/editor.rs:1291
+#: src/editor.rs:1322
 msgid "Save the picture with annotations as PNG (Ctrl+S)"
 msgstr "Bild mit Markierungen als PNG speichern (Strg+S)"
 
-#: src/editor.rs:1297
+#: src/editor.rs:1328
 msgid "Copy"
 msgstr "Kopieren"
 
-#: src/editor.rs:1300
+#: src/editor.rs:1331
 msgid "Copy the picture with annotations to the clipboard (Ctrl+C)"
 msgstr "Bild mit Markierungen in die Zwischenablage kopieren (Strg+C)"
 
-#: src/editor.rs:1308
+#: src/editor.rs:1339
 msgid "Undo: remove the last annotation (Ctrl+Z)"
 msgstr "Rückgängig: letzte Markierung entfernen (Strg+Z)"
 
-#: src/editor.rs:1315
+#: src/editor.rs:1346
 msgid "Redo (Ctrl+Shift+Z)"
 msgstr "Wiederholen (Strg+Umschalt+Z)"
 
-#: src/editor.rs:1322
+#: src/editor.rs:1353
 msgid "Remove all annotations – the screenshot stays"
 msgstr "Alle Markierungen entfernen – das Bildschirmfoto bleibt"
 
-#: src/editor.rs:1339
+#: src/editor.rs:1370
 msgid "Fit"
 msgstr "Einpassen"
 
-#: src/editor.rs:1340
+#: src/editor.rs:1371
 msgid "Fit the picture to the window; off: original size with scroll bars"
 msgstr ""
 "Bild ins Fenster einpassen; ausgeschaltet: Originalgröße mit Bildlaufleisten"
 
-#: src/editor.rs:1591
+#: src/editor.rs:1622
 msgid "Type text – Enter confirms, Esc discards"
 msgstr "Text eingeben – Eingabetaste übernimmt, Esc verwirft"
 
-#: src/editor.rs:1610
+#: src/editor.rs:1641
 msgid "Text discarded"
 msgstr "Text verworfen"
 
-#: src/editor.rs:1658
+#: src/editor.rs:1697
 msgid "Cancelled"
 msgstr "Abgebrochen"
 
-#: src/editor.rs:1684
+#: src/editor.rs:1723
 msgid "Changes are not saved"
 msgstr "Änderungen nicht gespeichert"
 
-#: src/editor.rs:1685
+#: src/editor.rs:1724
 msgid ""
 "The annotations have changed since they were last saved or were never saved. Closing loses these changes."
 msgstr ""
 "Die Markierungen wurden seit dem letzten Speichern geändert oder noch nie gespeichert. Beim Schließen gehen diese Änderungen verloren."
 
-#: src/editor.rs:1691
+#: src/editor.rs:1730
 msgid "Close _without Saving"
 msgstr "_Ohne Speichern schließen"
 
-#: src/editor.rs:1692 src/editor.rs:1751 src/instant.rs:723 src/instant.rs:902
+#: src/editor.rs:1731 src/editor.rs:1793 src/instant.rs:723 src/instant.rs:902
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
-#: src/editor.rs:1725
+#: src/editor.rs:1764
 msgid "Closing cancelled"
 msgstr "Schließen abgebrochen"
 
-#: src/editor.rs:1749
+#: src/editor.rs:1791
 msgid "Remove all annotations?"
 msgstr "Alle Markierungen entfernen?"
 
-#: src/editor.rs:1750
+#: src/editor.rs:1792
 msgid "The screenshot itself is kept. Ctrl+Z brings the annotations back."
 msgstr ""
 "Das Bildschirmfoto selbst bleibt erhalten. Mit Strg+Z lassen sich die Markierungen zurückholen."
 
-#: src/editor.rs:1751
+#: src/editor.rs:1793
 msgid "_Remove"
 msgstr "_Entfernen"
 
-#: src/editor.rs:1769
+#: src/editor.rs:1811
 msgid "All annotations removed"
 msgstr "Alle Markierungen entfernt"
 
-#: src/editor.rs:1782
+#: src/editor.rs:1824
 #, no-c-format
 msgid "Not saved: {error}"
 msgstr "Nicht gespeichert: {error}"
 
 #. TRANSLATORS: {description} beschreibt die Aufnahme („Screen“).
-#: src/editor.rs:1793
+#: src/editor.rs:1835
 #, no-c-format
 msgid "{description} with {n} annotation"
 msgid_plural "{description} with {n} annotations"
 msgstr[0] "{description} mit {n} Markierung"
 msgstr[1] "{description} mit {n} Markierungen"
 
-#: src/editor.rs:1822
+#: src/editor.rs:1864
 #, no-c-format
 msgid "Saved: {path}"
 msgstr "Gespeichert: {path}"
 
-#: src/editor.rs:1851
+#: src/editor.rs:1893
 #, no-c-format
 msgid "Not copied: {error}"
 msgstr "Nicht kopiert: {error}"
 
-#: src/editor.rs:1863
+#: src/editor.rs:1905
 msgid ""
 "Copied through GTK (wl-copy is missing) – valid only while the editor is open"
 msgstr ""
 "Kopiert über GTK (wl-copy fehlt) – gilt nur, solange der Editor offen ist"
 
-#: src/editor.rs:1867
+#: src/editor.rs:1909
 msgid "Cannot copy: wl-copy is missing"
 msgstr "Kopieren nicht möglich: wl-copy fehlt"
 
-#: src/editor.rs:1873 src/instant.rs:848
+#: src/editor.rs:1915 src/instant.rs:848
 msgid "Copying to the clipboard…"
 msgstr "Kopiere in die Zwischenablage …"
 
-#: src/editor.rs:1883
+#: src/editor.rs:1925
 #, no-c-format
 msgid "Copied to the clipboard (image/png, {n} annotation)"
 msgid_plural "Copied to the clipboard (image/png, {n} annotations)"
 msgstr[0] "In die Zwischenablage kopiert (image/png, {n} Markierung)"
 msgstr[1] "In die Zwischenablage kopiert (image/png, {n} Markierungen)"
 
-#: src/editor.rs:1890
+#: src/editor.rs:1932
 msgid "Copying ended unexpectedly"
 msgstr "Kopieren wurde unerwartet beendet"
 
@@ -555,7 +555,7 @@ msgstr "Fenster (gewählt {area}, maximiert)"
 msgid "Cannot read the picture: {error}"
 msgstr "Bild kann nicht gelesen werden: {error}"
 
-#: src/instant.rs:376 src/ui.rs:366
+#: src/instant.rs:376 src/ui.rs:408
 msgid "The capture ended unexpectedly."
 msgstr "Die Aufnahme wurde unerwartet beendet."
 
@@ -802,22 +802,22 @@ msgstr "_Bereich auswählen"
 msgid "Drag a rectangle while holding the mouse button. Esc cancels."
 msgstr "Mit gedrückter Maustaste ein Rechteck aufziehen. Esc bricht ab."
 
-#: src/ui.rs:175
+#: src/ui.rs:208
 msgid "What would you like to capture?"
 msgstr "Was möchten Sie aufnehmen?"
 
-#: src/ui.rs:182
+#: src/ui.rs:215
 msgid "After the capture the editor opens for annotating, saving and copying."
 msgstr ""
 "Nach der Aufnahme öffnet sich der Editor zum Markieren, Speichern und Kopieren."
 
-#: src/ui.rs:234
+#: src/ui.rs:267
 #, no-c-format
 msgid ""
 "Missing programs: {programs}. Window and area need slurp, copying needs wl-copy (package wl-clipboard)."
 msgstr ""
 "Fehlende Programme: {programs}. Fenster und Bereich brauchen slurp, Kopieren braucht wl-copy (Paket wl-clipboard)."
 
-#: src/ui.rs:360
+#: src/ui.rs:402
 msgid "Cancelled – nothing captured."
 msgstr "Abgebrochen – keine Aufnahme."

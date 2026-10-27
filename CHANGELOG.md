@@ -4,6 +4,22 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen
 nach [Semantic Versioning](https://semver.org/lang/de/). Solange die Hauptversion
 0 ist, kann sich alles ändern. Jede Zeile nennt, was Nutzer merken.
 
+## [0.2.11] – 2026-10-26
+
+### Neu
+- Italienisch, Spanisch, Französisch: Kataloge `po/it.po`, `po/es.po`,
+  `po/fr.po` (je 171 Texte, vollständig) für Auswahlfenster, Editor (Menüs,
+  Werkzeugleiste, Werkzeuge, Farben, Statuszeile, Rückfragen), Speicher- und
+  Ordnerdialog, Meldungen und Desktop-Datei (`Name[it]=Cattura schermata`,
+  `Name[es]=Capturar pantalla`, `Name[fr]=Capture d’écran`); Tastennamen in
+  den Menükürzeln landesüblich (Maiusc, Mayús, Maj). MetaInfo mit Name,
+  Zusammenfassung, Beschreibungen und Schlüsselwörtern in diesen Sprachen.
+  Wortschatz gedit/GNOME je Sprache und die gemeinsame
+  Querencia-Begriffstabelle; Zugriffstasten je Menü und Dialog eindeutig.
+
+### Unverändert
+- Deutsch, Englisch, Aufnahme, Editor, Farben und Symbol wie 0.2.10.
+
 ## [0.2.10] – 2026-10-22
 
 Ab 0.2.9 (Tag `screenshot/0.2.9-int`). Dunkelmodus.

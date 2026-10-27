@@ -217,7 +217,7 @@ msgstr ""
 msgid "_New Screenshot"
 msgstr ""
 
-#: src/editor.rs:555 src/editor.rs:1693
+#: src/editor.rs:555 src/editor.rs:1732
 msgid "_Save…"
 msgstr ""
 
@@ -251,12 +251,12 @@ msgstr ""
 msgid "_Edit"
 msgstr ""
 
-#: src/editor.rs:591 src/editor.rs:840
+#: src/editor.rs:591 src/editor.rs:870
 msgid "_Custom Color…"
 msgstr ""
 
 #. TRANSLATORS: Abschnittstitel im Menü Werkzeuge.
-#: src/editor.rs:593 src/editor.rs:881
+#: src/editor.rs:593 src/editor.rs:911
 msgid "Color"
 msgstr ""
 
@@ -265,7 +265,7 @@ msgid "Set _Line Width…"
 msgstr ""
 
 #. TRANSLATORS: Abschnittstitel im Menü Werkzeuge.
-#: src/editor.rs:604 src/editor.rs:1089 src/editor.rs:1180
+#: src/editor.rs:604 src/editor.rs:1120 src/editor.rs:1211
 msgid "Line Width"
 msgstr ""
 
@@ -293,172 +293,172 @@ msgctxt "keyboard label"
 msgid "Shift"
 msgstr ""
 
-#: src/editor.rs:843
+#: src/editor.rs:873
 msgid "Choose any color in the color dialog"
 msgstr ""
 
-#: src/editor.rs:904
+#: src/editor.rs:934
 msgid "Custom Color"
 msgstr ""
 
-#: src/editor.rs:925
+#: src/editor.rs:955
 msgid "Choose a hue and a shade or type “#RRGGBB”."
 msgstr ""
 
-#: src/editor.rs:930 src/ui.rs:194
+#: src/editor.rs:960 src/ui.rs:227
 msgid "Cancel"
 msgstr ""
 
-#: src/editor.rs:932
+#: src/editor.rs:962
 msgid "Apply"
 msgstr ""
 
-#: src/editor.rs:967
+#: src/editor.rs:997
 #, no-c-format
 msgid "Color chosen: {color}"
 msgstr ""
 
-#: src/editor.rs:1105
+#: src/editor.rs:1136
 msgid "Line width in pixels"
 msgstr ""
 
-#: src/editor.rs:1281
+#: src/editor.rs:1312
 msgid "New"
 msgstr ""
 
-#: src/editor.rs:1284
+#: src/editor.rs:1315
 msgid "New screenshot (Ctrl+N)"
 msgstr ""
 
-#: src/editor.rs:1288
+#: src/editor.rs:1319
 msgid "Save"
 msgstr ""
 
-#: src/editor.rs:1291
+#: src/editor.rs:1322
 msgid "Save the picture with annotations as PNG (Ctrl+S)"
 msgstr ""
 
-#: src/editor.rs:1297
+#: src/editor.rs:1328
 msgid "Copy"
 msgstr ""
 
-#: src/editor.rs:1300
+#: src/editor.rs:1331
 msgid "Copy the picture with annotations to the clipboard (Ctrl+C)"
 msgstr ""
 
-#: src/editor.rs:1308
+#: src/editor.rs:1339
 msgid "Undo: remove the last annotation (Ctrl+Z)"
 msgstr ""
 
-#: src/editor.rs:1315
+#: src/editor.rs:1346
 msgid "Redo (Ctrl+Shift+Z)"
 msgstr ""
 
-#: src/editor.rs:1322
+#: src/editor.rs:1353
 msgid "Remove all annotations – the screenshot stays"
 msgstr ""
 
-#: src/editor.rs:1339
+#: src/editor.rs:1370
 msgid "Fit"
 msgstr ""
 
-#: src/editor.rs:1340
+#: src/editor.rs:1371
 msgid "Fit the picture to the window; off: original size with scroll bars"
 msgstr ""
 
-#: src/editor.rs:1591
+#: src/editor.rs:1622
 msgid "Type text – Enter confirms, Esc discards"
 msgstr ""
 
-#: src/editor.rs:1610
+#: src/editor.rs:1641
 msgid "Text discarded"
 msgstr ""
 
-#: src/editor.rs:1658
+#: src/editor.rs:1697
 msgid "Cancelled"
 msgstr ""
 
-#: src/editor.rs:1684
+#: src/editor.rs:1723
 msgid "Changes are not saved"
 msgstr ""
 
-#: src/editor.rs:1685
+#: src/editor.rs:1724
 msgid ""
 "The annotations have changed since they were last saved or were never saved. Closing loses these changes."
 msgstr ""
 
-#: src/editor.rs:1691
+#: src/editor.rs:1730
 msgid "Close _without Saving"
 msgstr ""
 
-#: src/editor.rs:1692 src/editor.rs:1751 src/instant.rs:723 src/instant.rs:902
+#: src/editor.rs:1731 src/editor.rs:1793 src/instant.rs:723 src/instant.rs:902
 msgid "_Cancel"
 msgstr ""
 
-#: src/editor.rs:1725
+#: src/editor.rs:1764
 msgid "Closing cancelled"
 msgstr ""
 
-#: src/editor.rs:1749
+#: src/editor.rs:1791
 msgid "Remove all annotations?"
 msgstr ""
 
-#: src/editor.rs:1750
+#: src/editor.rs:1792
 msgid "The screenshot itself is kept. Ctrl+Z brings the annotations back."
 msgstr ""
 
-#: src/editor.rs:1751
+#: src/editor.rs:1793
 msgid "_Remove"
 msgstr ""
 
-#: src/editor.rs:1769
+#: src/editor.rs:1811
 msgid "All annotations removed"
 msgstr ""
 
-#: src/editor.rs:1782
+#: src/editor.rs:1824
 #, no-c-format
 msgid "Not saved: {error}"
 msgstr ""
 
 #. TRANSLATORS: {description} beschreibt die Aufnahme („Screen“).
-#: src/editor.rs:1793
+#: src/editor.rs:1835
 #, no-c-format
 msgid "{description} with {n} annotation"
 msgid_plural "{description} with {n} annotations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/editor.rs:1822
+#: src/editor.rs:1864
 #, no-c-format
 msgid "Saved: {path}"
 msgstr ""
 
-#: src/editor.rs:1851
+#: src/editor.rs:1893
 #, no-c-format
 msgid "Not copied: {error}"
 msgstr ""
 
-#: src/editor.rs:1863
+#: src/editor.rs:1905
 msgid ""
 "Copied through GTK (wl-copy is missing) – valid only while the editor is open"
 msgstr ""
 
-#: src/editor.rs:1867
+#: src/editor.rs:1909
 msgid "Cannot copy: wl-copy is missing"
 msgstr ""
 
-#: src/editor.rs:1873 src/instant.rs:848
+#: src/editor.rs:1915 src/instant.rs:848
 msgid "Copying to the clipboard…"
 msgstr ""
 
-#: src/editor.rs:1883
+#: src/editor.rs:1925
 #, no-c-format
 msgid "Copied to the clipboard (image/png, {n} annotation)"
 msgid_plural "Copied to the clipboard (image/png, {n} annotations)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/editor.rs:1890
+#: src/editor.rs:1932
 msgid "Copying ended unexpectedly"
 msgstr ""
 
@@ -544,7 +544,7 @@ msgstr ""
 msgid "Cannot read the picture: {error}"
 msgstr ""
 
-#: src/instant.rs:376 src/ui.rs:366
+#: src/instant.rs:376 src/ui.rs:408
 msgid "The capture ended unexpectedly."
 msgstr ""
 
@@ -784,20 +784,20 @@ msgstr ""
 msgid "Drag a rectangle while holding the mouse button. Esc cancels."
 msgstr ""
 
-#: src/ui.rs:175
+#: src/ui.rs:208
 msgid "What would you like to capture?"
 msgstr ""
 
-#: src/ui.rs:182
+#: src/ui.rs:215
 msgid "After the capture the editor opens for annotating, saving and copying."
 msgstr ""
 
-#: src/ui.rs:234
+#: src/ui.rs:267
 #, no-c-format
 msgid ""
 "Missing programs: {programs}. Window and area need slurp, copying needs wl-copy (package wl-clipboard)."
 msgstr ""
 
-#: src/ui.rs:360
+#: src/ui.rs:402
 msgid "Cancelled – nothing captured."
 msgstr ""

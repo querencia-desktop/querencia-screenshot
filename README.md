@@ -26,8 +26,9 @@ the user interface is available in English and German.
   acht Grundfarben oder eigener Farbe, drei Stärken, Rückgängig/Wiederholen;
   Speichern als neues PNG in Originalgröße (nie überschreiben, Dateien
   `0600`) oder Kopieren in die Zwischenablage.
-- Oberfläche auf Englisch und Deutsch über GNU gettext (englische msgid,
-  `po/de.po`); Auswahl über `LANGUAGE`/`LANG`.
+- Oberfläche auf Englisch, Deutsch, Italienisch, Spanisch und Französisch
+  über GNU gettext (englische msgid, `po/<sprache>.po`); Auswahl über
+  `LANGUAGE`/`LANG`.
 - Bewusst **nicht** Teil dieses Programms: Bildbearbeitung über Markierungen
   hinaus, Hochladen, Videoaufnahme, Verzögerungstimer.
 
@@ -41,8 +42,8 @@ Ausführlich (Tasten, Aufnahmewege, Speichern, Sprachen, Aufbau):
 
 | | |
 |---|---|
-| Version | 0.2.10 (Tag `screenshot/0.2.10`; Auswahlfenster und Editor folgen dem Dunkelmodus); seit 0.2.9 behält das Auswahlfenster nach einem Abbruch seine Titelleiste; seit 0.2.8 Fensterwahl per Klick, Menükürzel in der Sprache der Oberfläche, Rückfrage bei angefangenem Text |
-| Letzte Prüfung | 22.10.2026 (0.2.10): isolierte Prüfung hell/dunkel (`werkzeug/dunkel-pruefung/`); 21.10.2026: Unit-Tests; isolierte GUI-Prüfung (Stand 0.2.8: 66 Fälle, 691 Prüfpunkte, 0 Fehler) |
+| Version | 0.2.11 (Tag `screenshot/0.2.11`; Italienisch, Spanisch, Französisch); seit 0.2.10 Auswahlfenster und Editor folgen dem Dunkelmodus); seit 0.2.9 behält das Auswahlfenster nach einem Abbruch seine Titelleiste; seit 0.2.8 Fensterwahl per Klick, Menükürzel in der Sprache der Oberfläche, Rückfrage bei angefangenem Text |
+| Letzte Prüfung | 26.10.2026 (0.2.11): fmt und Clippy sauber, 95 Unit-Tests, `i18n.py pruefen` und `msgfmt --check` für de/es/fr/it; isoliert 1024×768 de/en/it/es/fr: Auswahlfenster und Editor (alle Menüs, Speicherdialog, Farbpalette, Strichstärke) je 7 PASS. 22.10.2026 (0.2.10): isolierte Prüfung hell/dunkel (`werkzeug/dunkel-pruefung/`); 21.10.2026: Unit-Tests; isolierte GUI-Prüfung (Stand 0.2.8: 66 Fälle, 691 Prüfpunkte, 0 Fehler) |
 | Bekannte Lücken | Fensterwahl erkennt nur Fenster mit labwc-Rahmen; Kommandozeilenhilfe und Protokollzeilen nicht übersetzt; die isolierte GUI-Prüfung liegt noch nicht in diesem Repo |
 | Getestet auf | Ubuntu 26.04, labwc 0.9.8, GTK 4.22, Rust 1.93 |
 | Nicht getestet | andere Compositoren, HiDPI, Mehrmonitor |

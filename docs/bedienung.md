@@ -73,7 +73,8 @@ Fehlende Programme werden gemeldet; nichts wird automatisch installiert.
 ## Sprachen
 
 Seit 0.2.7 sind die Texte der Oberfläche englisch im Code (msgid) und deutsch
-in `po/de.po`, über GNU gettext wie bei GNOME und Debian (Muster: Querencia
+in `po/de.po` (seit 0.2.11 auch italienisch, spanisch und französisch in
+`po/it.po`, `po/es.po`, `po/fr.po`), über GNU gettext wie bei GNOME und Debian (Muster: Querencia
 Editor 0.2.0). Der deutsche Wortlaut ist der bisherige. Übersetzt sind
 Auswahlfenster, Editor (Menüs, Werkzeugleiste, Statuszeile, Rückfragen),
 Speicher- und Ordnerdialog, Fehlermeldungen und die Desktop-Datei
@@ -84,7 +85,7 @@ Dateinamen (`Screenshot-…png`, `…-markiert.png`). Statusmeldungen des Editor
 und Namen von Farben und Werkzeugen stehen im Protokoll in der Sprache der
 Oberfläche.
 
-- Sprachwahl über `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`; ohne deutschen
+- Sprachwahl über `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`; ohne passenden
   Katalog erscheint Englisch. `LANGUAGE` wirkt nicht bei der Locale `C`.
 - Kataloge `<lang>/LC_MESSAGES/querencia-screenshot.mo`: zuerst
   `<Ordner der Binary>/share/locale`, dann `<Ordner der Binary>/../share/locale`,
@@ -118,7 +119,7 @@ src/screenshot.rs  Png: Signaturprüfung, Größenlimit, Abmessungen
 src/storage.rs     Zielordner, Dateinamen, privates Speichern ohne Überschreiben
 src/clipboard.rs   wl-copy mit image/png
 src/style.css      helle, kompakte, klassische Optik
-po/                querencia-screenshot.pot, de.po, LINGUAS
+po/                querencia-screenshot.pot, de.po, it.po, es.po, fr.po, LINGUAS
 werkzeug/i18n.py   po-Pflege (pot, update, desktop, mo, pruefen)
 data/              Desktop-Vorlage (.in, englisch), erzeugte Desktop-Datei, MetaInfo
 ```

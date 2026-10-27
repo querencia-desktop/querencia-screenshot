@@ -6,8 +6,14 @@
   <id>org.querencia.Screenshot</id>
   <name>Querencia Screenshot</name>
   <name xml:lang="de">Querencia Bildschirmfoto</name>
+  <name xml:lang="it">Querencia Schermata</name>
+  <name xml:lang="es">Querencia Captura de pantalla</name>
+  <name xml:lang="fr">Querencia Capture d’écran</name>
   <summary>Take a screenshot of the screen, a window or an area and annotate it</summary>
   <summary xml:lang="de">Ein Bildschirmfoto des Bildschirms, eines Fensters oder eines Bereichs aufnehmen und markieren</summary>
+  <summary xml:lang="it">Cattura lo schermo, una finestra o un’area e aggiungi annotazioni</summary>
+  <summary xml:lang="es">Capturar la pantalla, una ventana o un área y anotarla</summary>
+  <summary xml:lang="fr">Capturer l’écran, une fenêtre ou une zone et l’annoter</summary>
   <metadata_license>FSFAP</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <developer id="org.querencia">
@@ -18,8 +24,14 @@
   <description>
     <p>Querencia Screenshot captures the whole screen, a single window or a selected area under Wayland (labwc) and opens the picture in an editor with pen, lines, arrows, rectangles, text and a colour palette. Pictures are saved to a chosen folder or copied to the clipboard.</p>
     <p xml:lang="de">Querencia Bildschirmfoto nimmt den ganzen Bildschirm, ein einzelnes Fenster oder einen gewählten Bereich unter Wayland (labwc) auf und öffnet das Bild in einem Editor mit Stift, Linien, Pfeilen, Rechtecken, Text und Farbpalette. Bilder werden in einen gewählten Ordner gespeichert oder in die Zwischenablage kopiert.</p>
+    <p xml:lang="it">Querencia Schermata cattura l’intero schermo, una singola finestra o un’area selezionata con Wayland (labwc) e apre l’immagine in un editor con penna, linee, frecce, rettangoli, testo e una tavolozza di colori. Le immagini si salvano in una cartella a scelta o si copiano negli appunti.</p>
+    <p xml:lang="es">Querencia Captura de pantalla captura toda la pantalla, una sola ventana o un área seleccionada en Wayland (labwc) y abre la imagen en un editor con lápiz, líneas, flechas, rectángulos, texto y una paleta de colores. Las imágenes se guardan en una carpeta elegida o se copian al portapapeles.</p>
+    <p xml:lang="fr">Querencia Capture d’écran capture l’écran entier, une seule fenêtre ou une zone choisie sous Wayland (labwc) et ouvre l’image dans un éditeur avec crayon, lignes, flèches, rectangles, texte et palette de couleurs. Les images sont enregistrées dans un dossier choisi ou copiées dans le presse-papiers.</p>
     <p>The Print key of the Querencia session starts the program through the session's launcher.</p>
     <p xml:lang="de">Die Druck-Taste der Querencia-Sitzung startet das Programm über den Starter der Sitzung.</p>
+    <p xml:lang="it">Il tasto Stamp della sessione Querencia avvia il programma tramite il lanciatore della sessione.</p>
+    <p xml:lang="es">La tecla Impr Pant de la sesión de Querencia inicia el programa mediante el lanzador de la sesión.</p>
+    <p xml:lang="fr">La touche Impr. écran de la session Querencia lance le programme par le lanceur de la session.</p>
   </description>
   <url type="homepage">https://querencialinux.org</url>
   <launchable type="desktop-id">org.querencia.Screenshot.desktop</launchable>
@@ -38,6 +50,15 @@
     <keyword xml:lang="de">Bildschirmfoto</keyword>
     <keyword xml:lang="de">Screenshot</keyword>
     <keyword xml:lang="de">Aufnahme</keyword>
+    <keyword xml:lang="it">schermata</keyword>
+    <keyword xml:lang="it">screenshot</keyword>
+    <keyword xml:lang="it">cattura</keyword>
+    <keyword xml:lang="es">captura</keyword>
+    <keyword xml:lang="es">pantalla</keyword>
+    <keyword xml:lang="es">screenshot</keyword>
+    <keyword xml:lang="fr">capture</keyword>
+    <keyword xml:lang="fr">écran</keyword>
+    <keyword xml:lang="fr">screenshot</keyword>
   </keywords>
   <content_rating type="oars-1.1"/>
   <branding>
@@ -45,22 +66,40 @@
     <color type="primary" scheme_preference="dark">#B8532B</color>
   </branding>
   <releases>
+    <release version="0.2.11" date="2026-10-26">
+      <description>
+        <p>The interface is now also available in Italian, Spanish and French.</p>
+        <p xml:lang="de">Die Oberfläche gibt es jetzt auch auf Italienisch, Spanisch und Französisch.</p>
+        <p xml:lang="it">L’interfaccia è ora disponibile anche in italiano, spagnolo e francese.</p>
+        <p xml:lang="es">La interfaz ya está disponible también en italiano, español y francés.</p>
+        <p xml:lang="fr">L’interface est désormais aussi disponible en italien, espagnol et français.</p>
+      </description>
+    </release>
     <release version="0.2.10" date="2026-10-22">
       <description>
         <p>The capture window and the editor follow the dark style of the desktop.</p>
         <p xml:lang="de">Auswahlfenster und Editor folgen der dunklen Darstellung des Desktops.</p>
+        <p xml:lang="it">La finestra di cattura e l’editor seguono lo stile scuro della scrivania.</p>
+        <p xml:lang="es">La ventana de captura y el editor siguen el estilo oscuro del escritorio.</p>
+        <p xml:lang="fr">La fenêtre de capture et l’éditeur suivent le style sombre du bureau.</p>
       </description>
     </release>
     <release version="0.2.9" date="2026-10-21">
       <description>
         <p>The capture window keeps its title bar when it comes back after a cancelled capture.</p>
         <p xml:lang="de">Das Auswahlfenster behält seine Titelleiste, wenn es nach einer abgebrochenen Aufnahme zurückkommt.</p>
+        <p xml:lang="it">La finestra di cattura mantiene la barra del titolo quando ricompare dopo una cattura annullata.</p>
+        <p xml:lang="es">La ventana de captura conserva su barra de título cuando vuelve tras una captura cancelada.</p>
+        <p xml:lang="fr">La fenêtre de capture garde sa barre de titre lorsqu’elle revient après une capture annulée.</p>
       </description>
     </release>
     <release version="0.2.8" date="2026-10-20">
       <description>
         <p>Window selection: detected windows are highlighted under the pointer and captured with a click; dragging outside them frames freely. Menu shortcuts in the language of the interface; text that is still being typed counts as an unsaved change.</p>
         <p xml:lang="de">Fensterwahl: erkannte Fenster werden unter dem Mauszeiger hervorgehoben und per Klick aufgenommen; außerhalb davon wird frei eingerahmt. Menükürzel in der Sprache der Oberfläche; ein angefangener Text zählt als ungespeicherte Änderung.</p>
+        <p xml:lang="it">Selezione della finestra: le finestre riconosciute vengono evidenziate sotto il puntatore e catturate con un clic; trascinando fuori da esse si inquadra liberamente. Scorciatoie dei menu nella lingua dell’interfaccia; un testo ancora in scrittura conta come modifica non salvata.</p>
+        <p xml:lang="es">Selección de ventana: las ventanas detectadas se resaltan bajo el puntero y se capturan con un clic; arrastrando fuera de ellas se enmarca libremente. Atajos de menú en el idioma de la interfaz; un texto que aún se está escribiendo cuenta como cambio sin guardar.</p>
+        <p xml:lang="fr">Choix de la fenêtre : les fenêtres détectées sont mises en évidence sous le pointeur et capturées d’un clic ; en faisant glisser en dehors, on encadre librement. Raccourcis des menus dans la langue de l’interface ; un texte en cours de saisie compte comme une modification non enregistrée.</p>
       </description>
     </release>
     <release version="0.2.7" date="2026-10-20"/>

@@ -598,7 +598,7 @@ dependencies = [
 
 [[package]]
 name = "querencia-screenshot"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "gettext-rs",
  "gtk4",
