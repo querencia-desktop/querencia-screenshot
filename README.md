@@ -10,8 +10,9 @@ Anleitung auf <https://querencialinux.org>.
 *English summary:* A screenshot tool in the spirit of GNOME 2's
 gnome-screenshot with a small markup editor (ellipse, rectangle, arrow, pen,
 text), built on grim and slurp. Part of Querencia Desktop, a classic
-GNOME-2-style desktop for Wayland. Alpha software; documentation is in German,
-the user interface is available in English and German.
+GNOME-2-style desktop for Wayland. Alpha software; the user interface is
+available in German, English, Italian, Spanish and French; documentation is in
+German.
 
 > **Alpha.** Die Fensterwahl erkennt Fenster an ihren labwc-Rahmen im Bild
 > (labwc meldet keine Fenstergrenzen). Keine Sicherheits- oder
